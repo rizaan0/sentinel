@@ -1,1 +1,1 @@
-# sentinal
+# sentinel
