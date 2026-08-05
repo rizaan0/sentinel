@@ -79,9 +79,6 @@ docker exec sentinel_ollama ollama pull llama3.2:1b
 
 Seed an admin account (there is no public admin signup, by design):
 
-```powershell
-docker exec sentinel_backend python scripts/seed_admin.py --email admin@sentinel.app --password ChangeMe123 --full-name "Sentinel Admin"
-```
 
 > **Note:** if you change frontend dependencies after the container was first built, its
 > `node_modules` anonymous volume goes stale. Refresh it with:
