@@ -111,12 +111,6 @@ npm install
 npm run dev
 ```
 
-### Seeding an admin
-
-```powershell
-cd backend
-..\.venv\Scripts\python.exe scripts\seed_admin.py --email admin@sentinel.app --password ChangeMe123 --full-name "Sentinel Admin"
-```
 
 ## Testing
 
