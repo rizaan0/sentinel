@@ -1,0 +1,53 @@
+# ---- Web framework & server ----
+fastapi==0.133.1
+uvicorn[standard]==0.41.0
+starlette==1.0.1
+websockets==15.0.1
+python-multipart==0.0.27
+
+# ---- Data validation / settings ----
+pydantic==2.13.4
+pydantic-settings==2.13.1
+pydantic_core==2.46.4
+email-validator==2.2.0
+
+# ---- Database ----
+SQLAlchemy==2.0.51
+alembic==1.18.5
+psycopg2-binary==2.9.12
+
+# ---- Cache / Pub-Sub ----
+redis==8.1.0
+
+# ---- Auth / security ----
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+PyJWT==2.13.0
+cryptography==46.0.7
+
+# ---- Scheduling (reconciliation / predictive jobs) ----
+APScheduler==3.11.0
+
+# ---- Data / ML ----
+numpy==2.2.6
+pandas==2.2.3
+scikit-learn==1.6.1
+joblib==1.4.2
+Faker==33.1.0
+
+# ---- HTTP / async utilities ----
+httpx==0.28.1
+anyio==4.12.1
+tenacity==9.1.4
+
+# ---- Config / env ----
+python-dotenv==1.2.2
+PyYAML==6.0.3
+
+# ---- Logging / CLI ----
+rich==14.3.3
+
+# ---- Testing ----
+pytest==8.3.4
+pytest-asyncio==0.25.2
+pytest-cov==6.0.0

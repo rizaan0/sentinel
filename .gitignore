@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Env files (keep examples)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Test / lint / type caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage/
+.tox/
+.nox/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# ML artifacts / trained models
+ml/artifacts/
+backend/app/ml_artifacts/
+*.pkl
+*.joblib
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Docker / local overrides
+docker-compose.override.yml
