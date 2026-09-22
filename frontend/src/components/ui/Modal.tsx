@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Button } from "./Button";
+import { SfIcon } from "./icons";
 
 type Props = {
   open: boolean;
@@ -41,11 +42,16 @@ export function Modal({ open, title, onClose, children, footer }: Props) {
         className="relative z-10 w-full max-w-md rounded-t-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-xl)]"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
-          <h2 id="modal-title" className="text-lg font-semibold text-balance">
+          <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-balance">
             {title}
           </h2>
-          <Button variant="ghost" onClick={onClose} aria-label="Close" className="!min-h-10 !px-2">
-            ✕
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            aria-label="Close"
+            className="!min-h-10 !px-2 text-[var(--color-text-muted)]"
+          >
+            <SfIcon name="xmark" weight="semibold" size={18} />
           </Button>
         </div>
         <div>{children}</div>
