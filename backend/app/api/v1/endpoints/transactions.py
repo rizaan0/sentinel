@@ -23,17 +23,33 @@ from app.services.transfer_service import (
     get_transaction_for_user,
     list_transactions_for_user,
     search_recipient,
+    search_recipients,
 )
 
 router = APIRouter()
 
 
-@router.get("/search", response_model=UserSearchResult)
+@router.get("/search", response_model=UserSearchResult | list[UserSearchResult])
 def search(
-    account_number: str = Query(min_length=1, max_length=20),
+    account_number: str | None = Query(default=None, min_length=1, max_length=20),
+    q: str | None = Query(default=None, min_length=1, max_length=120),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> UserSearchResult:
+) -> UserSearchResult | list[UserSearchResult]:
+    """
+    Backward compatible: `account_number` returns a single match (404 if none).
+    Prefer `q` for discovery — returns a capped list (exact/prefix account or name).
+    """
+    if q is not None:
+        matches = search_recipients(db, q, exclude_user_id=current_user.id)
+        return [UserSearchResult.model_validate(user) for user in matches]
+
+    if account_number is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Provide account_number or q",
+        )
+
     recipient = search_recipient(db, account_number, exclude_user_id=current_user.id)
     if recipient is None:
         raise HTTPException(

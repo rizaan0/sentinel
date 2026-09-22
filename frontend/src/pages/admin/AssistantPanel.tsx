@@ -2,6 +2,9 @@ import { useState, type FormEvent } from "react";
 import { api } from "../../lib/api";
 import type { AssistantLogEntry } from "../../lib/adminTypes";
 import { extractErrorMessage } from "../../lib/errors";
+import { Button } from "../../components/ui/Button";
+import { InlineAlert } from "../../components/ui/InlineAlert";
+import { Input } from "../../components/ui/Input";
 
 interface AssistantPanelProps {
   transactionId?: string;
@@ -9,10 +12,7 @@ interface AssistantPanelProps {
 }
 
 /**
- * AI Investigation Assistant chat panel, embedded in an alert/user detail
- * view. It only explains monitoring results (rules, ML score,
- * reconciliation) - it never decides fraud (per idea.md and the
- * Architecture Rules).
+ * AI Investigation Assistant — explains monitoring results only.
  */
 export default function AssistantPanel({ transactionId, accountNumber }: AssistantPanelProps) {
   const [question, setQuestion] = useState("");
@@ -40,31 +40,38 @@ export default function AssistantPanel({ transactionId, accountNumber }: Assista
   };
 
   return (
-    <div className="mt-3 border-t border-neutral-200 dark:border-neutral-800 pt-3 space-y-2">
-      <p className="text-xs font-medium text-neutral-500">AI Investigation Assistant</p>
+    <div className="space-y-3 border-t border-[var(--color-border)] pt-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        AI Investigation Assistant
+      </p>
+      <p className="text-xs text-[var(--color-text-muted)]">
+        Explains monitoring results — never decides fraud on its own.
+      </p>
 
       {history.map((entry) => (
-        <div key={entry.id} className="text-sm space-y-1">
+        <div key={entry.id} className="space-y-1 rounded-[var(--radius-md)] bg-[var(--color-ink-50)] p-3 text-sm">
           <p className="font-medium">Q: {entry.question}</p>
-          <p className="text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">
-            {entry.answer}
-          </p>
+          <p className="whitespace-pre-wrap text-[var(--color-ink-700)] text-pretty">{entry.answer}</p>
         </div>
       ))}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <InlineAlert>{error}</InlineAlert>}
 
       <form onSubmit={onSubmit} className="flex gap-2">
-        <input
+        <label htmlFor="assistant-q" className="sr-only">
+          Ask the investigation assistant
+        </label>
+        <Input
+          id="assistant-q"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask why this was flagged..."
-          className="input flex-1 text-sm"
+          placeholder="Ask why this was flagged…"
+          className="!py-2 text-sm flex-1"
           required
         />
-        <button type="submit" disabled={submitting} className="btn-primary text-sm">
-          {submitting ? "Asking..." : "Ask"}
-        </button>
+        <Button type="submit" disabled={submitting} className="!min-h-11 shrink-0">
+          {submitting ? "…" : "Ask"}
+        </Button>
       </form>
     </div>
   );

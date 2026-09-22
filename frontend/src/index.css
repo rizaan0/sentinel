@@ -1,22 +1,182 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  /* Cool neutrals — Umbra light canvas */
+  --color-ink-50: #f7f8fa;
+  --color-ink-100: #eef1f5;
+  --color-ink-200: #e2e6ec;
+  --color-ink-300: #c5ccd6;
+  --color-ink-400: #9aa3b2;
+  --color-ink-500: #6b7280;
+  --color-ink-600: #4b5563;
+  --color-ink-700: #374151;
+  --color-ink-800: #1f2937;
+  --color-ink-900: #0e1b39;
+  --color-ink-950: #0a1328;
+
+  /* Umbra sky / cyan brand ramp (#00ADEF family) */
+  --color-signal-50: #ebf8ff;
+  --color-signal-100: #d6f1ff;
+  --color-signal-200: #a8e4ff;
+  --color-signal-300: #6ad0ff;
+  --color-signal-400: #2eb8f5;
+  --color-signal-500: #00adef;
+  --color-signal-600: #0095d6;
+  --color-signal-700: #0077b0;
+  --color-signal-800: #065a87;
+  --color-signal-900: #0a4a6e;
+  --color-signal-950: #072f47;
+
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
+  --color-rose-700: #be123c;
+
+  --color-surface: #f7f8fa;
+  --color-surface-raised: #ffffff;
+  --color-surface-muted: #f1f3f6;
+  --color-surface-ink: #0e1b39;
+  --color-border: #e2e6ec;
+  --color-border-strong: #c5ccd6;
+  --color-text: #0e1b39;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #ffffff;
+  --color-accent: #00adef;
+  --color-accent-hover: #0095d6;
+  --color-accent-soft: #ebf8ff;
+  --color-accent-glow: rgb(0 173 239 / 0.35);
+  --color-danger: #e11d48;
+  --color-danger-soft: #ffe4e6;
+  --color-success: #059669;
+  --color-success-soft: #ecfdf5;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 1px 2px rgb(14 27 57 / 0.04);
+  --shadow-md: 0 8px 28px rgb(14 27 57 / 0.06);
+  --shadow-lg: 0 20px 50px rgb(14 27 57 / 0.08);
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
   margin: 0;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* Soft white canvas + cyan aurora + faint grid (Umbra-like) */
+.app-atmosphere {
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% 5%, rgb(0 173 239 / 0.14), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 5% 95%, rgb(168 228 255 / 0.35), transparent 50%),
+    radial-gradient(rgb(14 27 57 / 0.045) 1px, transparent 1px);
+  background-size: auto, auto, 24px 24px;
+}
+
+.ink-atmosphere {
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% 5%, rgb(0 173 239 / 0.14), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 5% 95%, rgb(168 228 255 / 0.35), transparent 50%),
+    radial-gradient(rgb(14 27 57 / 0.045) 1px, transparent 1px);
+  background-size: auto, auto, 24px 24px;
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent
-      px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white;
+    @apply w-full rounded-[var(--radius-md)] border border-[var(--color-border)]
+      bg-[var(--color-surface-muted)] px-3.5 py-3 text-base text-[var(--color-text)]
+      placeholder:text-[var(--color-ink-400)]
+      focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/35 focus:border-[var(--color-accent)]
+      focus:bg-[var(--color-surface-raised)];
   }
 
   .btn-primary {
-    @apply rounded-md bg-neutral-900 text-white dark:bg-white dark:text-neutral-900
-      px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)]
+      bg-[var(--color-accent)] text-[var(--color-text-inverse)]
+      px-5 py-3 text-sm font-semibold min-h-11
+      shadow-[0_6px_20px_var(--color-accent-glow)]
+      transition-[transform,background-color,box-shadow] duration-150
+      ease-[cubic-bezier(0.2,0,0,1)]
+      hover:bg-[var(--color-accent-hover)]
+      active:scale-[0.96]
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)]
+      border border-[var(--color-border)] bg-[var(--color-surface-raised)]
+      text-[var(--color-text)] px-5 py-3 text-sm font-semibold min-h-11
+      transition-[transform,background-color] duration-150
+      ease-[cubic-bezier(0.2,0,0,1)]
+      hover:bg-[var(--color-ink-50)]
+      active:scale-[0.96]
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)]
+      text-[var(--color-text-muted)] px-3 py-2 text-sm font-medium min-h-11
+      transition-[transform,color,background-color] duration-150
+      ease-[cubic-bezier(0.2,0,0,1)]
+      hover:text-[var(--color-text)] hover:bg-[var(--color-ink-100)]
+      active:scale-[0.96];
+  }
+
+  .surface-card {
+    @apply rounded-[var(--radius-xl)] border border-[var(--color-border)]
+      bg-[var(--color-surface-raised)] shadow-[var(--shadow-sm)];
+  }
+
+  .surface-inset {
+    @apply rounded-[var(--radius-lg)] border border-[var(--color-border)]
+      bg-[var(--color-surface-muted)];
+  }
+
+  .surface-ink {
+    @apply rounded-[var(--radius-xl)] border border-[var(--color-border)]
+      bg-[var(--color-surface-raised)] text-[var(--color-text)]
+      shadow-[var(--shadow-md)];
+  }
+
+  .label-accent {
+    @apply text-sm font-semibold text-[var(--color-accent)];
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }

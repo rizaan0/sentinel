@@ -48,11 +48,9 @@ describe("FraudAlertsTab (admin alert review)", () => {
     expect(await screen.findByText(/account 123456789012/i)).toBeInTheDocument();
     expect(screen.getByText(/risk 30/i)).toBeInTheDocument();
 
-    // Reveal the rule-based explanation.
-    await user.click(screen.getByRole("button", { name: /show explanation/i }));
-    expect(screen.getByText(/3 transfers within 60 seconds/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /investigate/i }));
+    expect(await screen.findByText(/3 transfers within 60 seconds/i)).toBeInTheDocument();
 
-    // Change the investigation status.
     await user.selectOptions(screen.getByDisplayValue("open"), "investigating");
 
     expect(api.patch).toHaveBeenCalledWith("/fraud-alerts/1/status", {

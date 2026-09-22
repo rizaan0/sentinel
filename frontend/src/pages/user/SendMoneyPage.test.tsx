@@ -18,12 +18,20 @@ describe("SendMoneyPage", () => {
     localStorage.clear();
     vi.mocked(api.post).mockReset();
     vi.mocked(api.get).mockReset();
+    // Recent people load on mount
+    vi.mocked(api.get).mockResolvedValue({
+      data: { items: [], total: 0, limit: 30, offset: 0 },
+    });
   });
 
   it("walks through search -> amount -> review -> authorize -> receipt", async () => {
-    vi.mocked(api.get).mockResolvedValueOnce({
-      data: { account_number: "999999999999", full_name: "Bob" },
-    });
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({
+        data: { items: [], total: 0, limit: 30, offset: 0 },
+      })
+      .mockResolvedValueOnce({
+        data: [{ account_number: "999999999999", full_name: "Bob" }],
+      });
     vi.mocked(api.post).mockResolvedValueOnce({
       data: {
         transaction_id: "tx-123",
@@ -43,25 +51,24 @@ describe("SendMoneyPage", () => {
     const user = userEvent.setup();
     renderWithProviders(<SendMoneyPage />);
 
-    // Step 1: search
     await user.type(
-      screen.getByLabelText(/recipient account number/i),
+      screen.getByLabelText(/search by name or account number/i),
       "999999999999",
     );
-    await user.click(screen.getByRole("button", { name: /find recipient/i }));
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
 
     expect(await screen.findByText("Bob")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /bob/i }));
 
-    // Step 2: amount
     await user.type(screen.getByLabelText(/amount \(st\)/i), "50");
-    await user.click(screen.getByRole("button", { name: /review transfer/i }));
+    await user.click(screen.getByRole("button", { name: /^review$/i }));
 
-    // Step 3: review + PIN authorization
     expect(await screen.findByText(/50 st/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/enter transaction pin/i), "1111");
-    await user.click(screen.getByRole("button", { name: /authorize transfer/i }));
+    await user.click(screen.getByRole("button", { name: /confirm & enter pin/i }));
 
-    // Step 4: receipt
+    await user.type(screen.getByLabelText(/transaction pin/i), "1111");
+    await user.click(screen.getByRole("button", { name: /pay 50 st/i }));
+
     expect(await screen.findByText(/transfer successful/i)).toBeInTheDocument();
     expect(screen.getByText("tx-123")).toBeInTheDocument();
 
@@ -73,17 +80,19 @@ describe("SendMoneyPage", () => {
     });
   });
 
-  it("shows an error when the recipient cannot be found", async () => {
-    vi.mocked(api.get).mockRejectedValueOnce({
-      response: { data: { detail: "No account found with that number" } },
-    });
+  it("shows an error when no matching accounts are found", async () => {
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({
+        data: { items: [], total: 0, limit: 30, offset: 0 },
+      })
+      .mockResolvedValueOnce({ data: [] });
 
     const user = userEvent.setup();
     renderWithProviders(<SendMoneyPage />);
 
-    await user.type(screen.getByLabelText(/recipient account number/i), "000000000000");
-    await user.click(screen.getByRole("button", { name: /find recipient/i }));
+    await user.type(screen.getByLabelText(/search by name or account number/i), "nobody");
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-    expect(await screen.findByText(/no account found with that number/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no matching accounts found/i)).toBeInTheDocument();
   });
 });

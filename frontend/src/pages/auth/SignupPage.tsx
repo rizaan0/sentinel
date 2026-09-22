@@ -2,6 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/useAuth";
 import { extractErrorMessage } from "../../lib/errors";
+import { AuthLayout } from "../../components/ui/AuthLayout";
+import { Button } from "../../components/ui/Button";
+import { Field } from "../../components/ui/Field";
+import { Input } from "../../components/ui/Input";
+import { InlineAlert } from "../../components/ui/InlineAlert";
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -28,66 +33,60 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm p-6 border rounded-lg border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4"
-      >
-        <h1 className="text-xl font-semibold">Create your Sentinel account</h1>
-        <p className="text-sm text-neutral-500">
-          You'll get a unique account number and 1000 ST Coins to start.
-        </p>
-
-        <Field label="Full name">
-          <input
+    <AuthLayout
+      title="Create your account"
+      subtitle="Get a unique account number and 1000 ST Coins to start."
+    >
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <Field label="Full name" htmlFor="signup-name">
+          <Input
+            id="signup-name"
             required
+            autoComplete="name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="input"
           />
         </Field>
-        <Field label="Email">
-          <input
+        <Field label="Email" htmlFor="signup-email">
+          <Input
+            id="signup-email"
             required
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="input"
+            invalid={Boolean(error)}
           />
         </Field>
-        <Field label="Password">
-          <input
+        <Field
+          label="Password"
+          htmlFor="signup-password"
+          hint="At least 8 characters."
+        >
+          <Input
+            id="signup-password"
             required
-            minLength={8}
             type="password"
+            autoComplete="new-password"
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input"
           />
         </Field>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
-          {submitting ? "Creating account..." : "Sign up"}
-        </button>
+        <Button type="submit" disabled={submitting} fullWidth>
+          {submitting ? "Creating account…" : "Sign up"}
+        </Button>
 
-        <p className="text-sm text-neutral-500 text-center">
+        <p className="text-center text-sm text-[var(--color-text-muted)]">
           Already have an account?{" "}
-          <Link to="/login" className="underline">
+          <Link to="/login" className="font-medium text-[var(--color-accent)] underline-offset-2 hover:underline">
             Log in
           </Link>
         </p>
       </form>
-    </main>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block text-sm font-medium">
-      {label}
-      <div className="mt-1">{children}</div>
-    </label>
+    </AuthLayout>
   );
 }

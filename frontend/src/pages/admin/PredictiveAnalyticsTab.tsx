@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import type { RiskPrediction } from "../../lib/adminTypes";
+import { Button } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
 
-const LEVEL_COLOR: Record<string, string> = {
-  high: "text-red-600",
-  medium: "text-amber-600",
-  low: "text-neutral-500",
+const LEVEL_STYLE: Record<string, string> = {
+  high: "bg-[var(--color-danger-soft)] text-[var(--color-rose-700)]",
+  medium: "bg-[#fff7ed] text-[#c2410c]",
+  low: "bg-[var(--color-ink-100)] text-[var(--color-ink-600)]",
 };
 
-/**
- * Predictive Analytics: ranks users whose fraud-alert frequency/severity
- * is trending upward, estimating who is likely to become suspicious next
- * (per idea.md).
- */
 export default function PredictiveAnalyticsTab() {
   const [predictions, setPredictions] = useState<RiskPrediction[] | null>(null);
   const [running, setRunning] = useState(false);
@@ -35,35 +32,48 @@ export default function PredictiveAnalyticsTab() {
 
   return (
     <div className="space-y-4">
-      <button onClick={runNow} disabled={running} className="btn-primary">
-        {running ? "Running..." : "Run predictive analytics now"}
-      </button>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Predictive analytics</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            Accounts whose fraud-signal trends are rising.
+          </p>
+        </div>
+        <Button onClick={runNow} disabled={running}>
+          {running ? "Running…" : "Run now"}
+        </Button>
+      </div>
 
-      {!predictions && <p className="text-sm text-neutral-500">Loading predictions...</p>}
+      {!predictions && (
+        <p className="text-sm text-[var(--color-text-muted)]">Loading predictions…</p>
+      )}
       {predictions && predictions.length === 0 && (
-        <p className="text-sm text-neutral-500">
-          No at-risk trends yet - predictions appear once users have recent fraud alerts.
-        </p>
+        <EmptyState
+          title="No at-risk trends yet"
+          description="Predictions appear once users have recent fraud alerts to trend on."
+        />
       )}
 
       <ul className="space-y-2">
         {predictions?.map((p) => (
-          <li
-            key={p.id}
-            className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 flex items-center justify-between"
-          >
+          <li key={p.id} className="surface-card flex items-center justify-between gap-4 p-4">
             <div>
               <p className="font-mono font-medium">{p.account_number}</p>
-              <p className="text-xs text-neutral-500">
-                {p.alerts_last_7d} alerts this week (vs {p.alerts_prior_7d} the week before),
-                avg risk {p.avg_risk_score_last_7d.toFixed(1)}
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                <span className="tabular">{p.alerts_last_7d}</span> alerts this week (vs{" "}
+                <span className="tabular">{p.alerts_prior_7d}</span> prior) · avg risk{" "}
+                <span className="tabular">{p.avg_risk_score_last_7d.toFixed(1)}</span>
               </p>
             </div>
             <div className="text-right">
-              <p className={`font-semibold ${LEVEL_COLOR[p.predicted_risk_level]}`}>
-                {p.predicted_risk_level.toUpperCase()}
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${LEVEL_STYLE[p.predicted_risk_level]}`}
+              >
+                {p.predicted_risk_level}
+              </span>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)] tabular">
+                trend {p.trend_score.toFixed(1)}
               </p>
-              <p className="text-xs text-neutral-400">trend {p.trend_score.toFixed(1)}</p>
             </div>
           </li>
         ))}

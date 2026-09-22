@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import type { ReconciliationReport } from "../../lib/adminTypes";
+import { Button } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
 
-/**
- * Reconciliation reports: identifies accounting mismatches independent of
- * the fraud/monitoring pipeline (per idea.md and the Architecture Rules).
- */
 export default function ReconciliationTab() {
   const [reports, setReports] = useState<ReconciliationReport[] | null>(null);
   const [running, setRunning] = useState(false);
@@ -30,40 +28,57 @@ export default function ReconciliationTab() {
 
   return (
     <div className="space-y-4">
-      <button onClick={runNow} disabled={running} className="btn-primary">
-        {running ? "Running..." : "Run reconciliation now"}
-      </button>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Reconciliation</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            Ledger vs wallet balance checks — independent of the fraud pipeline.
+          </p>
+        </div>
+        <Button onClick={runNow} disabled={running}>
+          {running ? "Running…" : "Run now"}
+        </Button>
+      </div>
 
-      {!reports && <p className="text-sm text-neutral-500">Loading reports...</p>}
+      {!reports && <p className="text-sm text-[var(--color-text-muted)]">Loading reports…</p>}
       {reports && reports.length === 0 && (
-        <p className="text-sm text-neutral-500">No reconciliation reports yet.</p>
+        <EmptyState
+          title="No reconciliation reports yet"
+          description="Run reconciliation to compare wallet balances against ledger sums."
+        />
       )}
 
-      <ul className="space-y-3">
+      <ul className="space-y-2">
         {reports?.map((report) => (
-          <li
-            key={report.id}
-            className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4"
-          >
-            <div className="flex items-center justify-between">
+          <li key={report.id} className="surface-card p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span
-                className={
-                  report.status === "clean" ? "text-green-600 font-medium" : "text-red-600 font-medium"
-                }
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                  report.status === "clean"
+                    ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                    : "bg-[var(--color-danger-soft)] text-[var(--color-rose-700)]"
+                }`}
               >
-                {report.status}
+                {report.status.replace("_", " ")}
               </span>
-              <span className="text-xs text-neutral-400">
-                {new Date(report.created_at).toLocaleString()} ({report.triggered_by})
+              <span className="text-xs text-[var(--color-text-muted)]">
+                {new Date(report.created_at).toLocaleString()} · {report.triggered_by}
               </span>
             </div>
-            <p className="text-sm text-neutral-500 mt-1">
-              {report.accounts_checked} accounts checked, {report.discrepancy_count} discrepancies
+            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+              <span className="tabular font-medium text-[var(--color-text)]">
+                {report.accounts_checked}
+              </span>{" "}
+              accounts checked ·{" "}
+              <span className="tabular font-medium text-[var(--color-text)]">
+                {report.discrepancy_count}
+              </span>{" "}
+              discrepancies
             </p>
             {report.discrepancies.length > 0 && (
-              <ul className="mt-2 text-sm space-y-1">
+              <ul className="mt-3 space-y-1 rounded-[var(--radius-md)] bg-[var(--color-ink-50)] p-3 font-mono text-xs">
                 {report.discrepancies.map((d) => (
-                  <li key={d.account_number} className="font-mono">
+                  <li key={d.account_number}>
                     {d.account_number}: expected {d.expected_balance}, actual {d.actual_balance}{" "}
                     (diff {d.difference})
                   </li>

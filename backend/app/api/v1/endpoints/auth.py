@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings
-from app.core.rate_limit import RateLimitExceededError, check_and_increment
+from app.core.rate_limit import RateLimitExceededError, check_and_increment, reset_attempts
 from app.core.security import create_access_token
 from app.models.user import User
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
@@ -15,6 +15,7 @@ from app.services.auth_service import (
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
     authenticate_user,
+    normalize_email,
     signup_user,
 )
 
@@ -37,9 +38,10 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)) -> TokenRespon
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    rate_limit_key = f"login_attempts:{normalize_email(payload.email)}"
     try:
         check_and_increment(
-            f"login_attempts:{payload.email.lower()}",
+            rate_limit_key,
             settings.LOGIN_MAX_ATTEMPTS,
             settings.LOGIN_RATE_LIMIT_WINDOW_MINUTES * 60,
         )
@@ -54,6 +56,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
         ) from exc
+
+    # Successful auth clears the failure window so a few typos don't permanently
+    # burn the user's budget until the Redis TTL expires.
+    reset_attempts(rate_limit_key)
     return _to_token_response(user)
 
 

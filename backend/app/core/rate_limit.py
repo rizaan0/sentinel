@@ -37,3 +37,11 @@ def check_and_increment(key: str, max_attempts: int, window_seconds: int) -> Non
             raise RateLimitExceededError("Too many attempts. Please try again in a few minutes.")
     except redis_sync.RedisError:
         return
+
+
+def reset_attempts(key: str) -> None:
+    """Clear a rate-limit counter (e.g. after a successful login)."""
+    try:
+        _get_client().delete(key)
+    except redis_sync.RedisError:
+        return

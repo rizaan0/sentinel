@@ -60,7 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/login", {
+        email: email.trim(),
+        password,
+      });
       persistSession(response.data.access_token, response.data.user);
       return response.data.user as CurrentUser;
     },
@@ -70,8 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = useCallback(
     async (fullName: string, email: string, password: string) => {
       const response = await api.post("/auth/signup", {
-        full_name: fullName,
-        email,
+        full_name: fullName.trim(),
+        email: email.trim(),
         password,
       });
       persistSession(response.data.access_token, response.data.user);

@@ -44,6 +44,36 @@ def test_search_unknown_account_returns_404(client):
     assert response.status_code == 404
 
 
+def test_search_q_finds_recipient_by_name(client):
+    alice, alice_headers = _signup_with_pin(client, "alice_qname@example.com")
+    bob, _ = _signup_with_pin(client, "bob_qname@example.com")
+    # signup uses email local-part as full_name via helper — override by checking bob's name
+    response = client.get(
+        "/api/v1/transactions/search?q=bob_qname",
+        headers=alice_headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert any(item["account_number"] == bob["account_number"] for item in body)
+    assert all("email" not in item for item in body)
+    assert alice["account_number"] not in [item["account_number"] for item in body]
+
+
+def test_search_q_finds_recipient_by_account_prefix(client):
+    _, alice_headers = _signup_with_pin(client, "alice_qprefix@example.com")
+    bob, _ = _signup_with_pin(client, "bob_qprefix@example.com")
+    prefix = bob["account_number"][:6]
+    response = client.get(
+        f"/api/v1/transactions/search?q={prefix}",
+        headers=alice_headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert any(item["account_number"] == bob["account_number"] for item in body)
+
+
 def test_successful_transfer_updates_both_balances_and_returns_receipt(client):
     alice, alice_headers = _signup_with_pin(client, "alice_t@example.com", pin="1111")
     bob, bob_headers = _signup_with_pin(client, "bob_t@example.com", pin="2222")

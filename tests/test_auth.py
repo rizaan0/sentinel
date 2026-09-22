@@ -55,6 +55,22 @@ def test_login_with_wrong_password_fails(client):
     assert response.status_code == 401
 
 
+def test_login_is_case_insensitive_on_email(client):
+    _signup(client, email="Case.User@Example.com", password="correcthorse1")
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "case.user@example.com", "password": "correcthorse1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "case.user@example.com"
+
+
+def test_signup_duplicate_is_case_insensitive(client):
+    assert _signup(client, email="Dup.Case@Example.com").status_code == 201
+    response = _signup(client, email="dup.case@example.com")
+    assert response.status_code == 409
+
+
 def test_me_requires_bearer_token(client):
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 401

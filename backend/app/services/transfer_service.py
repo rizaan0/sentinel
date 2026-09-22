@@ -49,6 +49,61 @@ def search_recipient(db: Session, account_number: str, exclude_user_id: int) -> 
     return user
 
 
+def search_recipients(
+    db: Session,
+    query: str,
+    exclude_user_id: int,
+    *,
+    limit: int = 10,
+) -> list[User]:
+    """
+    Recipient discovery: exact account, account prefix, or case-insensitive
+    name match. Never exposes email. Caps results for a clean picker UX.
+    """
+    q = query.strip()
+    if not q:
+        return []
+
+    digits_only = q.isdigit()
+    if digits_only:
+        exact = search_recipient(db, q, exclude_user_id)
+        if exact is not None and len(q) >= 12:
+            return [exact]
+
+        rows = (
+            db.execute(
+                select(User)
+                .where(
+                    User.is_active.is_(True),
+                    User.id != exclude_user_id,
+                    User.account_number.startswith(q),
+                )
+                .order_by(User.full_name)
+                .limit(limit)
+            )
+            .scalars()
+            .all()
+        )
+        return list(rows)
+
+    pattern = f"%{q}%"
+    rows = (
+        db.execute(
+            select(User)
+            .where(
+                User.is_active.is_(True),
+                User.id != exclude_user_id,
+                User.full_name.ilike(pattern),
+            )
+            .order_by(User.full_name)
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+    return list(rows)
+
+
 def execute_transfer(db: Session, sender: User, payload: TransferRequest) -> Transaction:
     # --- Transaction Validation: Recipient Exists ---
     receiver = db.execute(

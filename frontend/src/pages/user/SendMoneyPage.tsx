@@ -1,48 +1,98 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { extractErrorMessage } from "../../lib/errors";
-import type { RecipientResult, TransactionReceipt } from "../../lib/types";
+import type { PaginatedTransactions, RecipientResult, TransactionReceipt } from "../../lib/types";
 import { useAuth } from "../../lib/useAuth";
+import { recentPeopleFromHistory } from "../../lib/recentPeople";
+import { Amount } from "../../components/ui/Amount";
+import { Avatar } from "../../components/ui/Avatar";
+import { Button } from "../../components/ui/Button";
+import { CopyButton } from "../../components/ui/CopyButton";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { Field } from "../../components/ui/Field";
+import { InlineAlert } from "../../components/ui/InlineAlert";
+import { Input } from "../../components/ui/Input";
+import { Modal } from "../../components/ui/Modal";
+import { Stepper } from "../../components/ui/Stepper";
 
 type Step = "search" | "amount" | "review" | "receipt";
 
+const STEPS = [
+  { id: "search", label: "Find" },
+  { id: "amount", label: "Amount" },
+  { id: "review", label: "Review" },
+  { id: "receipt", label: "Done" },
+];
+
 /**
- * Send Money wizard: search -> select -> amount/remark -> review -> PIN
- * authorization -> receipt (per idea.md's described transfer flow).
+ * Send Money wizard: find (recent + search) -> amount -> review -> PIN -> receipt.
  */
 export default function SendMoneyPage() {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselected = (location.state as { recipient?: RecipientResult } | null)?.recipient;
 
-  const [step, setStep] = useState<Step>("search");
+  const [step, setStep] = useState<Step>(preselected ? "amount" : "search");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [accountNumber, setAccountNumber] = useState("");
-  const [recipient, setRecipient] = useState<RecipientResult | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<RecipientResult[]>([]);
+  const [recipient, setRecipient] = useState<RecipientResult | null>(preselected ?? null);
+  const [recent, setRecent] = useState<RecipientResult[]>([]);
 
   const [amount, setAmount] = useState("");
   const [remark, setRemark] = useState("");
   const [pin, setPin] = useState("");
+  const [pinOpen, setPinOpen] = useState(false);
 
   const [receipt, setReceipt] = useState<TransactionReceipt | null>(null);
+
+  useEffect(() => {
+    api
+      .get<PaginatedTransactions>("/transactions/history", { params: { limit: 30 } })
+      .then((response) => setRecent(recentPeopleFromHistory(response.data.items, 8)));
+  }, []);
+
+  const remaining = useMemo(() => {
+    if (user?.balance == null) return null;
+    const balance = Number(user.balance);
+    const parsed = Number(amount);
+    if (!Number.isFinite(balance) || !Number.isFinite(parsed)) return null;
+    return balance - parsed;
+  }, [user?.balance, amount]);
 
   const onSearch = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    const q = query.trim();
+    if (!q) {
+      setError("Enter a name or account number.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const response = await api.get<RecipientResult>("/transactions/search", {
-        params: { account_number: accountNumber },
+      const response = await api.get<RecipientResult[]>("/transactions/search", {
+        params: { q },
       });
-      setRecipient(response.data);
-      setStep("amount");
+      setResults(response.data);
+      if (response.data.length === 0) {
+        setError("No matching accounts found.");
+      }
     } catch (err) {
-      setError(extractErrorMessage(err, "No account found with that number."));
+      setError(extractErrorMessage(err, "Search failed."));
+      setResults([]);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const selectRecipient = (person: RecipientResult) => {
+    setRecipient(person);
+    setError(null);
+    setStep("amount");
   };
 
   const onContinueToReview = (event: FormEvent) => {
@@ -53,12 +103,20 @@ export default function SendMoneyPage() {
       setError("Enter a valid amount greater than zero.");
       return;
     }
+    if (remaining !== null && remaining < 0) {
+      setError("Amount exceeds your available balance.");
+      return;
+    }
     setStep("review");
   };
 
   const onAuthorize = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!/^\d{4,6}$/.test(pin)) {
+      setError("Enter your 4–6 digit Transaction PIN.");
+      return;
+    }
     setSubmitting(true);
     try {
       const response = await api.post<TransactionReceipt>("/transactions/transfer", {
@@ -68,6 +126,7 @@ export default function SendMoneyPage() {
         pin,
       });
       setReceipt(response.data);
+      setPinOpen(false);
       setStep("receipt");
       await refreshUser();
     } catch (err) {
@@ -78,123 +137,272 @@ export default function SendMoneyPage() {
     }
   };
 
+  const goBack = () => {
+    setError(null);
+    if (step === "amount") setStep("search");
+    else if (step === "review") setStep("amount");
+  };
+
   return (
-    <main className="min-h-screen p-6 max-w-md mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Send money</h1>
-        <Link to="/dashboard" className="text-sm underline text-neutral-500">
-          Back to dashboard
-        </Link>
+    <div className="space-y-7">
+      <div>
+        <h1 className="text-xl font-bold tracking-tight">Send money</h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-text-muted)]">
+          Pay anyone on Sentinel with ST Coins.
+        </p>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {step !== "receipt" && <Stepper steps={STEPS} current={step} />}
+
+      {error && step !== "review" && <InlineAlert>{error}</InlineAlert>}
 
       {step === "search" && (
-        <form onSubmit={onSearch} className="space-y-4">
-          <label className="block text-sm font-medium">
-            Recipient account number
-            <input
-              required
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-              className="input mt-1"
-              placeholder="e.g. 123456789012"
+        <div className="space-y-5">
+          {recent.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-[var(--color-text-muted)]">Recent</h2>
+              <ul className="flex gap-3 overflow-x-auto pb-1">
+                {recent.map((person) => (
+                  <li key={person.account_number}>
+                    <button
+                      type="button"
+                      onClick={() => selectRecipient(person)}
+                      className="flex w-20 flex-col items-center gap-2 rounded-[var(--radius-md)] p-2 hover:bg-[var(--color-ink-50)] active:scale-[0.96]"
+                    >
+                      <Avatar name={person.full_name} />
+                      <span className="w-full truncate text-center text-xs font-medium">
+                        {person.full_name.split(" ")[0]}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <form onSubmit={onSearch} className="space-y-3">
+            <Field
+              label="Search by name or account number"
+              htmlFor="recipient-q"
+              hint="Paste an account number or type part of a name."
+            >
+              <Input
+                id="recipient-q"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                autoComplete="off"
+                placeholder="e.g. Alex or 123456…"
+              />
+            </Field>
+            <Button type="submit" disabled={submitting} fullWidth>
+              {submitting ? "Searching…" : "Search"}
+            </Button>
+          </form>
+
+          {results.length > 0 && (
+            <ul className="surface-card divide-y divide-[var(--color-border)] overflow-hidden">
+              {results.map((person) => (
+                <li key={person.account_number}>
+                  <button
+                    type="button"
+                    onClick={() => selectRecipient(person)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--color-ink-50)]"
+                  >
+                    <Avatar name={person.full_name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{person.full_name}</p>
+                      <p className="font-mono text-xs text-[var(--color-text-muted)]">
+                        {person.account_number}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {recent.length === 0 && results.length === 0 && !submitting && (
+            <EmptyState
+              title="Find someone to pay"
+              description="Search by their name or full account number. Recent people appear here after your first transfer."
             />
-          </label>
-          <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? "Searching..." : "Find recipient"}
-          </button>
-        </form>
+          )}
+        </div>
       )}
 
       {step === "amount" && recipient && (
         <form onSubmit={onContinueToReview} className="space-y-4">
-          <RecipientCard recipient={recipient} />
-          <label className="block text-sm font-medium">
-            Amount (ST)
-            <input
-              required
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="input mt-1"
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            Remark (optional)
-            <input
+          <RecipientCard recipient={recipient} onChange={() => setStep("search")} />
+          <div className="surface-inset space-y-3 p-5">
+            <p className="label-accent">You&apos;re sending</p>
+            <Field label="Amount (ST)" htmlFor="amount">
+              <Input
+                id="amount"
+                required
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="!border-0 !bg-transparent text-center text-3xl font-extrabold tabular !ring-0 focus:!ring-0"
+              />
+            </Field>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Available: <span className="tabular font-semibold">{user?.balance} ST</span>
+              {remaining !== null && Number.isFinite(remaining) && (
+                <>
+                  {" "}
+                  · After:{" "}
+                  <span className="tabular font-semibold">{remaining.toFixed(2)} ST</span>
+                </>
+              )}
+            </p>
+          </div>
+          <Field label="Remark (optional)" htmlFor="remark">
+            <Input
+              id="remark"
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               maxLength={280}
-              className="input mt-1"
             />
-          </label>
-          <button type="submit" className="btn-primary w-full">
-            Review transfer
-          </button>
+          </Field>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={goBack} fullWidth>
+              Back
+            </Button>
+            <Button type="submit" fullWidth>
+              Review
+            </Button>
+          </div>
         </form>
       )}
 
       {step === "review" && recipient && (
-        <form onSubmit={onAuthorize} className="space-y-4">
-          <RecipientCard recipient={recipient} />
-          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-1 text-sm">
+        <div className="space-y-4">
+          <RecipientCard recipient={recipient} onChange={() => setStep("search")} />
+          <div className="surface-card space-y-2 p-4 text-sm">
             <Row label="Amount" value={`${amount} ST`} />
             {remark && <Row label="Remark" value={remark} />}
+            <Row label="From balance" value={`${user?.balance} ST`} />
           </div>
-          <label className="block text-sm font-medium">
-            Enter Transaction PIN to authorize
-            <input
-              required
-              inputMode="numeric"
-              type="password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              className="input mt-1"
-            />
-          </label>
-          <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? "Processing..." : "Authorize transfer"}
-          </button>
-        </form>
+          {error && <InlineAlert>{error}</InlineAlert>}
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={goBack} fullWidth>
+              Back
+            </Button>
+            <Button type="button" onClick={() => setPinOpen(true)} fullWidth>
+              Confirm & enter PIN
+            </Button>
+          </div>
+
+          <Modal
+            open={pinOpen}
+            title="Authorize transfer"
+            onClose={() => {
+              setPinOpen(false);
+              setPin("");
+              setError(null);
+            }}
+            footer={
+              <Button type="submit" form="pin-form" disabled={submitting} fullWidth>
+                {submitting ? "Processing…" : `Pay ${amount} ST`}
+              </Button>
+            }
+          >
+            <form id="pin-form" onSubmit={onAuthorize} className="space-y-3">
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Enter your Transaction PIN to send{" "}
+                <span className="font-semibold text-[var(--color-text)]">{amount} ST</span> to{" "}
+                <span className="font-semibold text-[var(--color-text)]">{recipient.full_name}</span>.
+              </p>
+              <Field label="Transaction PIN" htmlFor="transfer-pin">
+                <Input
+                  id="transfer-pin"
+                  required
+                  inputMode="numeric"
+                  type="password"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="tracking-[0.4em] text-center text-lg"
+                  invalid={Boolean(error)}
+                />
+              </Field>
+              {error && <InlineAlert>{error}</InlineAlert>}
+            </form>
+          </Modal>
+        </div>
       )}
 
       {step === "receipt" && receipt && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950 p-4 space-y-2">
-            <p className="font-semibold text-green-700 dark:text-green-400">Transfer successful</p>
-            <Row label="Transaction ID" value={receipt.transaction_id} mono />
-            <Row label="To" value={`${receipt.receiver_name} (${receipt.receiver_account_number})`} />
-            <Row label="Amount" value={`${receipt.amount} ST`} />
-            {receipt.remark && <Row label="Remark" value={receipt.remark} />}
-            <Row label="New balance" value={`${receipt.balance_after} ST`} />
+          <div className="surface-card space-y-4 bg-[var(--color-accent-soft)] p-5 text-center">
+            <p className="text-sm font-bold text-[var(--color-accent)]">Transfer successful</p>
+            <Amount value={receipt.amount} size="xl" />
+            <p className="text-sm text-[var(--color-text-muted)]">
+              to {receipt.receiver_name}
+            </p>
           </div>
-          <button onClick={() => navigate("/dashboard")} className="btn-primary w-full">
-            Back to dashboard
-          </button>
+          <dl className="surface-card divide-y divide-[var(--color-border)] text-sm">
+            <Row label="Transaction ID" value={receipt.transaction_id} mono />
+            <Row label="New balance" value={`${receipt.balance_after} ST`} />
+            {receipt.remark && <Row label="Remark" value={receipt.remark} />}
+          </dl>
+          <CopyButton value={receipt.transaction_id} label="Copy transaction ID" />
+          <Button onClick={() => navigate("/dashboard")} fullWidth>
+            Done
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setStep("amount");
+              setAmount("");
+              setRemark("");
+              setReceipt(null);
+            }}
+            fullWidth
+          >
+            Pay again
+          </Button>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
-function RecipientCard({ recipient }: { recipient: RecipientResult }) {
+function RecipientCard({
+  recipient,
+  onChange,
+}: {
+  recipient: RecipientResult;
+  onChange?: () => void;
+}) {
   return (
-    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
-      <p className="text-sm text-neutral-500">Sending to</p>
-      <p className="font-medium">{recipient.full_name}</p>
-      <p className="font-mono text-sm">{recipient.account_number}</p>
+    <div className="surface-card flex items-center gap-3 p-4">
+      <Avatar name={recipient.full_name} />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-[var(--color-text-muted)]">Sending to</p>
+        <p className="truncate font-medium">{recipient.full_name}</p>
+        <p className="font-mono text-xs text-[var(--color-text-muted)]">{recipient.account_number}</p>
+      </div>
+      {onChange && (
+        <Button variant="ghost" onClick={onChange} className="!min-h-10 text-xs">
+          Change
+        </Button>
+      )}
     </div>
   );
 }
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-neutral-500">{label}</span>
-      <span className={mono ? "font-mono text-right" : "text-right"}>{value}</span>
+    <div className="flex justify-between gap-4 px-4 py-3">
+      <span className="text-[var(--color-text-muted)]">{label}</span>
+      <span className={mono ? "max-w-[60%] break-all text-right font-mono text-xs" : "text-right font-medium"}>
+        {value}
+      </span>
     </div>
   );
 }

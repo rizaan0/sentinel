@@ -2,6 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/useAuth";
 import { extractErrorMessage } from "../../lib/errors";
+import { AuthLayout } from "../../components/ui/AuthLayout";
+import { Button } from "../../components/ui/Button";
+import { Field } from "../../components/ui/Field";
+import { Input } from "../../components/ui/Input";
+import { InlineAlert } from "../../components/ui/InlineAlert";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -31,47 +36,44 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm p-6 border rounded-lg border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4"
-      >
-        <h1 className="text-xl font-semibold">Log in to Sentinel</h1>
-
-        <label className="block text-sm font-medium">
-          Email
-          <input
+    <AuthLayout title="Welcome back" subtitle="Log in to send ST Coins and manage your account.">
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <Field label="Email" htmlFor="login-email" error={error ? undefined : undefined}>
+          <Input
+            id="login-email"
             required
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="input mt-1"
+            invalid={Boolean(error)}
           />
-        </label>
-        <label className="block text-sm font-medium">
-          Password
-          <input
+        </Field>
+        <Field label="Password" htmlFor="login-password">
+          <Input
+            id="login-password"
             required
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input mt-1"
+            invalid={Boolean(error)}
           />
-        </label>
+        </Field>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
+        <Button type="submit" disabled={submitting} fullWidth>
+          {submitting ? "Logging in…" : "Log in"}
+        </Button>
 
-        <p className="text-sm text-neutral-500 text-center">
-          Don't have an account?{" "}
-          <Link to="/signup" className="underline">
+        <p className="text-center text-sm text-[var(--color-text-muted)]">
+          Don&apos;t have an account?{" "}
+          <Link to="/signup" className="font-medium text-[var(--color-accent)] underline-offset-2 hover:underline">
             Sign up
           </Link>
         </p>
       </form>
-    </main>
+    </AuthLayout>
   );
 }

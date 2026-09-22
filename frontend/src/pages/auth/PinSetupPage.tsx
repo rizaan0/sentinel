@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/useAuth";
 import { extractErrorMessage } from "../../lib/errors";
+import { AuthLayout } from "../../components/ui/AuthLayout";
+import { Button } from "../../components/ui/Button";
+import { Field } from "../../components/ui/Field";
+import { Input } from "../../components/ui/Input";
+import { InlineAlert } from "../../components/ui/InlineAlert";
 
 /**
  * Mandatory, one-time Transaction PIN setup, enforced by RequireAuth before
@@ -26,7 +31,7 @@ export default function PinSetupPage() {
       return;
     }
     if (!/^\d{4,6}$/.test(pin)) {
-      setError("PIN must be 4-6 digits.");
+      setError("PIN must be 4–6 digits.");
       return;
     }
 
@@ -43,46 +48,46 @@ export default function PinSetupPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm p-6 border rounded-lg border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4"
-      >
-        <h1 className="text-xl font-semibold">Create your Transaction PIN</h1>
-        <p className="text-sm text-neutral-500">
-          This PIN authorizes every transfer you make, similar to a UPI PIN. It is stored
-          securely and is separate from your login password.
-        </p>
-
-        <label className="block text-sm font-medium">
-          PIN (4-6 digits)
-          <input
+    <AuthLayout
+      title="Create your Transaction PIN"
+      subtitle="This PIN authorizes every transfer — separate from your login password."
+    >
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <Field label="PIN (4-6 digits)" htmlFor="pin-setup" hint="Digits only. Never share this PIN.">
+          <Input
+            id="pin-setup"
             required
             inputMode="numeric"
+            autoComplete="one-time-code"
             type="password"
+            maxLength={6}
             value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            className="input mt-1"
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            className="tracking-[0.4em] text-center text-lg"
+            invalid={Boolean(error)}
           />
-        </label>
-        <label className="block text-sm font-medium">
-          Confirm PIN
-          <input
+        </Field>
+        <Field label="Confirm PIN" htmlFor="pin-confirm">
+          <Input
+            id="pin-confirm"
             required
             inputMode="numeric"
+            autoComplete="one-time-code"
             type="password"
+            maxLength={6}
             value={confirmPin}
-            onChange={(e) => setConfirmPin(e.target.value)}
-            className="input mt-1"
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            className="tracking-[0.4em] text-center text-lg"
+            invalid={Boolean(error)}
           />
-        </label>
+        </Field>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
-          {submitting ? "Saving..." : "Set PIN"}
-        </button>
+        <Button type="submit" disabled={submitting} fullWidth>
+          {submitting ? "Saving…" : "Set PIN"}
+        </Button>
       </form>
-    </main>
+    </AuthLayout>
   );
 }

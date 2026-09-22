@@ -3,7 +3,7 @@ Auth business logic: user registration and authentication.
 
 Architecture Rule: business logic lives only in backend services.
 """
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -24,19 +24,28 @@ class InvalidCredentialsError(Exception):
     pass
 
 
+def normalize_email(email: str) -> str:
+    """Canonical form for storage and lookup so signup/login stay consistent."""
+    return email.strip().lower()
+
+
 def get_user_by_email(db: Session, email: str) -> User | None:
-    return db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    normalized = normalize_email(email)
+    return db.execute(
+        select(User).where(func.lower(User.email) == normalized)
+    ).scalar_one_or_none()
 
 
 def signup_user(db: Session, payload: SignupRequest, role: UserRole = UserRole.USER) -> User:
-    if get_user_by_email(db, payload.email) is not None:
-        raise EmailAlreadyRegisteredError(f"Email already registered: {payload.email}")
+    email = normalize_email(payload.email)
+    if get_user_by_email(db, email) is not None:
+        raise EmailAlreadyRegisteredError(f"Email already registered: {email}")
 
     account_number = generate_unique_account_number(db)
 
     user = User(
-        full_name=payload.full_name,
-        email=payload.email,
+        full_name=payload.full_name.strip(),
+        email=email,
         password_hash=hash_password(payload.password),
         account_number=account_number,
         role=role,
@@ -50,6 +59,13 @@ def signup_user(db: Session, payload: SignupRequest, role: UserRole = UserRole.U
 
     record_genesis_credit(db, wallet)
 
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def set_user_password(db: Session, user: User, password: str) -> User:
+    user.password_hash = hash_password(password)
     db.commit()
     db.refresh(user)
     return user
