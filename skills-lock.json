@@ -61,6 +61,12 @@
       "skillPath": "skills/interface-review/SKILL.md",
       "computedHash": "e8575144eb155448757a82a3b89825c87045a85ca2ed3bd9131c53fc9682c8a5"
     },
+    "oklch-skill": {
+      "source": "jakubkrehel/oklch-skill",
+      "sourceType": "github",
+      "skillPath": "skills/oklch-skill/SKILL.md",
+      "computedHash": "e627c78e72955352f1efff3771e788a9ac174628fe3238738d1ee6912effdefd"
+    },
     "variant": {
       "source": "jakubkrehel/skills",
       "sourceType": "github",
