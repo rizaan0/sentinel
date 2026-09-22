@@ -54,6 +54,7 @@ export default function ReconciliationTab() {
         <EmptyState
           title="No reconciliation reports yet"
           description="Run reconciliation to compare wallet balances against ledger sums."
+          symbol="rectangle.stack"
         />
       )}
 
