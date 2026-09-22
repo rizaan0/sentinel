@@ -71,6 +71,7 @@ export default function LiveFeedTab() {
         <EmptyState
           title="Waiting for live activity"
           description="Perform a transfer in the user app to see it appear here instantly."
+          symbol="rectangle.stack"
         />
       )}
 
