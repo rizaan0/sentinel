@@ -17,6 +17,7 @@ import { Field } from "../../components/ui/Field";
 import { InlineAlert } from "../../components/ui/InlineAlert";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { SfIcon } from "../../components/ui/icons";
 import { Stepper } from "../../components/ui/Stepper";
 import { TransactionId } from "../../components/ui/TransactionId";
 
@@ -158,9 +159,9 @@ export default function SendMoneyPage() {
   };
 
   return (
-    <div className="space-y-7">
+    <div className="mx-auto w-full max-w-xl space-y-7 lg:max-w-2xl">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">Send money</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Send money</h1>
         <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-text-muted)]">
           Pay anyone on Sentinel with ST Coins.
         </p>
@@ -209,6 +210,7 @@ export default function SendMoneyPage() {
               />
             </Field>
             <Button type="submit" disabled={submitting} fullWidth>
+              <SfIcon name="magnifyingglass" weight="semibold" size={16} />
               {submitting ? "Searching…" : "Search"}
             </Button>
           </form>
@@ -241,6 +243,7 @@ export default function SendMoneyPage() {
             <EmptyState
               title="Find someone to pay"
               description="Search by their name or full account number. Recent people appear here after your first transfer."
+              symbol="magnifyingglass"
             />
           )}
         </div>
@@ -317,6 +320,7 @@ export default function SendMoneyPage() {
               Back
             </Button>
             <Button type="button" onClick={() => setPinOpen(true)} fullWidth>
+              <SfIcon name="lock" weight="semibold" size={16} />
               Confirm & enter PIN
             </Button>
           </div>
