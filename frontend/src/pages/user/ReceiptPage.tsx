@@ -9,6 +9,7 @@ import { Amount } from "../../components/ui/Amount";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { InlineAlert } from "../../components/ui/InlineAlert";
+import { SfIcon } from "../../components/ui/icons";
 import { TransactionId } from "../../components/ui/TransactionId";
 
 export default function ReceiptPage() {
@@ -27,9 +28,9 @@ export default function ReceiptPage() {
 
   if (error) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-xl space-y-4">
         <InlineAlert>{error}</InlineAlert>
-        <Button variant="secondary" onClick={() => navigate("/activity")} fullWidth>
+        <Button variant="secondary" onClick={() => navigate("/activity")} className="w-full sm:w-auto">
           Back to activity
         </Button>
       </div>
@@ -37,7 +38,11 @@ export default function ReceiptPage() {
   }
 
   if (!receipt) {
-    return <p className="text-sm text-[var(--color-text-muted)]">Loading receipt…</p>;
+    return (
+      <p className="mx-auto w-full max-w-xl text-sm text-[var(--color-text-muted)]">
+        Loading receipt…
+      </p>
+    );
   }
 
   const counterpartyName =
@@ -48,15 +53,16 @@ export default function ReceiptPage() {
       : receipt.sender_account_number;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-xl space-y-5">
       <Link
         to="/activity"
-        className="text-sm font-medium text-[var(--color-accent)] underline-offset-2 hover:underline"
+        className="inline-flex items-center gap-1 text-sm font-medium tracking-tight text-[var(--color-accent)] underline-offset-2 hover:underline"
       >
-        ← Activity
+        <SfIcon name="chevron.left" weight="semibold" size={16} />
+        Activity
       </Link>
 
-      <div className="surface-card space-y-5 p-5 text-center">
+      <div className="surface-card space-y-5 p-5 text-center sm:p-8">
         <Avatar name={counterpartyName} size="lg" />
         <div>
           <p className="text-sm text-[var(--color-text-muted)]">
@@ -72,7 +78,7 @@ export default function ReceiptPage() {
       </div>
 
       <dl className="surface-card divide-y divide-[var(--color-border)] text-sm">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <dt className="shrink-0 text-[var(--color-text-muted)]">Reference</dt>
           <dd className="min-w-0">
             <TransactionId id={receipt.transaction_id} />
@@ -83,32 +89,30 @@ export default function ReceiptPage() {
         <Row label="Balance after" value={`${receipt.balance_after} ST`} />
       </dl>
 
-      <div className="flex flex-col gap-2">
-        {receipt.direction === "sent" && (
-          <Button
-            onClick={() =>
-              navigate("/send", {
-                state: {
-                  recipient: {
-                    account_number: counterpartyAccount,
-                    full_name: counterpartyName,
-                  },
+      {receipt.direction === "sent" && (
+        <Button
+          onClick={() =>
+            navigate("/send", {
+              state: {
+                recipient: {
+                  account_number: counterpartyAccount,
+                  full_name: counterpartyName,
                 },
-              })
-            }
-            fullWidth
-          >
-            Pay again
-          </Button>
-        )}
-      </div>
+              },
+            })
+          }
+          className="w-full sm:w-auto sm:min-w-40"
+        >
+          Pay again
+        </Button>
+      )}
     </div>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 px-4 py-3">
+    <div className="flex justify-between gap-4 px-4 py-3 sm:px-5">
       <dt className="text-[var(--color-text-muted)]">{label}</dt>
       <dd className="text-right font-medium">{value}</dd>
     </div>
