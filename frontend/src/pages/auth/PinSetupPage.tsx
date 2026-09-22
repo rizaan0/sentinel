@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { Field } from "../../components/ui/Field";
 import { Input } from "../../components/ui/Input";
 import { InlineAlert } from "../../components/ui/InlineAlert";
+import { SfIcon } from "../../components/ui/icons";
 
 /**
  * Mandatory, one-time Transaction PIN setup, enforced by RequireAuth before
@@ -91,6 +92,7 @@ export default function PinSetupPage() {
         {error && <InlineAlert>{error}</InlineAlert>}
 
         <Button type="submit" disabled={submitting} fullWidth>
+          <SfIcon name="lock" weight="semibold" size={16} />
           <SlotText
             text={submitting ? "Saving…" : "Set PIN"}
             options={{ rollBy: "word", duration: 200, stagger: 28 }}
