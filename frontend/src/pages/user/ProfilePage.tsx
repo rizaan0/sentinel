@@ -4,20 +4,21 @@ import { cue } from "../../lib/cue";
 import { AccountNumber } from "../../components/ui/AccountNumber";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
+import { SfIcon } from "../../components/ui/icons";
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Profile</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Profile</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           Your Sentinel identity and account details.
         </p>
       </div>
 
-      <section className="surface-card flex items-center gap-4 p-5">
+      <section className="surface-card flex items-center gap-4 p-5 sm:p-6">
         <Avatar name={user?.full_name ?? "User"} size="lg" />
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold">{user?.full_name}</p>
@@ -26,13 +27,13 @@ export default function ProfilePage() {
       </section>
 
       <section className="surface-card divide-y divide-[var(--color-border)] text-sm">
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
           <div className="min-w-0 space-y-1.5">
             <p className="text-[var(--color-text-muted)]">Your account</p>
             {user?.account_number && <AccountNumber number={user.account_number} />}
           </div>
         </div>
-        <div className="space-y-1.5 px-4 py-3.5">
+        <div className="space-y-1.5 px-4 py-3.5 sm:px-5">
           <p className="text-[var(--color-text-muted)]">Balance</p>
           <div className="flex items-baseline gap-1.5">
             <SlotText
@@ -43,7 +44,7 @@ export default function ProfilePage() {
             <span className="text-sm font-medium text-[var(--color-text-muted)]">ST</span>
           </div>
         </div>
-        <div className="space-y-1.5 px-4 py-3.5">
+        <div className="space-y-1.5 px-4 py-3.5 sm:px-5">
           <p className="text-[var(--color-text-muted)]">Transaction PIN</p>
           <SlotText
             text={user?.pin_is_set ? "Set" : "Not set"}
@@ -59,8 +60,9 @@ export default function ProfilePage() {
           cue.dismiss();
           logout();
         }}
-        fullWidth
+        className="w-full sm:w-auto sm:min-w-40"
       >
+        <SfIcon name="person.crop.circle" weight="semibold" size={16} />
         Log out
       </Button>
     </div>
