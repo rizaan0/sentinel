@@ -50,6 +50,7 @@ export default function FraudAlertsTab() {
         <EmptyState
           title="No fraud alerts yet"
           description="Suspicious patterns from the monitoring engine will appear here."
+          symbol="exclamationmark.circle"
         />
       )}
 
