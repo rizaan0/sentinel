@@ -1,8 +1,8 @@
 const PALETTE = [
   "bg-signal-100 text-signal-800",
   "bg-ink-100 text-ink-700",
-  "bg-[#e8f4ff] text-[#1a5f8a]",
-  "bg-[#f0f4ff] text-[#3b4f9a]",
+  "bg-signal-50 text-signal-900",
+  "bg-ink-50 text-ink-800",
 ];
 
 function initials(name: string): string {

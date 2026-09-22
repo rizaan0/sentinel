@@ -1,6 +1,8 @@
+import { SlotText } from "slot-text/react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/useAuth";
+import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
 import { AuthLayout } from "../../components/ui/AuthLayout";
 import { Button } from "../../components/ui/Button";
@@ -24,8 +26,10 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       await signup(fullName, email, password);
+      cue.success("auth");
       navigate("/pin-setup", { replace: true });
     } catch (err: unknown) {
+      cue.error();
       setError(extractErrorMessage(err, "Could not create account."));
     } finally {
       setSubmitting(false);
@@ -77,7 +81,10 @@ export default function SignupPage() {
         {error && <InlineAlert>{error}</InlineAlert>}
 
         <Button type="submit" disabled={submitting} fullWidth>
-          {submitting ? "Creating account…" : "Sign up"}
+          <SlotText
+            text={submitting ? "Creating account…" : "Sign up"}
+            options={{ rollBy: "word", duration: 200, stagger: 28 }}
+          />
         </Button>
 
         <p className="text-center text-sm text-[var(--color-text-muted)]">

@@ -22,10 +22,18 @@ export function Button({
   type = "button",
   ...rest
 }: Props) {
+  const cueAttrs =
+    variant === "primary"
+      ? { "data-cuelume-press": "pulse", "data-cuelume-release": "" }
+      : variant === "secondary"
+        ? { "data-cuelume-press": "", "data-cuelume-release": "" }
+        : {};
+
   return (
     <button
       type={type}
       className={`${VARIANT_CLASS[variant]} ${fullWidth ? "w-full" : ""} ${className}`}
+      {...cueAttrs}
       {...rest}
     >
       {children}

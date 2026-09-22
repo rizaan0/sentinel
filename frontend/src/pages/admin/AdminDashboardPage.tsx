@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../lib/useAuth";
+import { cue } from "../../lib/cue";
 import { BrandMark } from "../../components/ui/BrandMark";
 import { Button } from "../../components/ui/Button";
 import OverviewTab from "./OverviewTab";
@@ -37,7 +38,14 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <p className="hidden text-sm text-[var(--color-text-muted)] sm:block">{user?.full_name}</p>
-            <Button variant="secondary" onClick={logout} className="!min-h-10 !px-3 !py-2 text-xs">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                cue.dismiss();
+                logout();
+              }}
+              className="!min-h-10 !px-3 !py-2 text-xs"
+            >
               Log out
             </Button>
           </div>
@@ -50,6 +58,7 @@ export default function AdminDashboardPage() {
             <button
               key={t.id}
               type="button"
+              data-cuelume-toggle
               onClick={() => setTab(t.id)}
               className={`min-h-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors ${
                 tab === t.id

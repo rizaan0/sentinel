@@ -4,55 +4,58 @@
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
 
-  /* Cool neutrals — Umbra light canvas */
-  --color-ink-50: #f7f8fa;
-  --color-ink-100: #eef1f5;
-  --color-ink-200: #e2e6ec;
-  --color-ink-300: #c5ccd6;
-  --color-ink-400: #9aa3b2;
-  --color-ink-500: #6b7280;
-  --color-ink-600: #4b5563;
-  --color-ink-700: #374151;
-  --color-ink-800: #1f2937;
-  --color-ink-900: #0e1b39;
-  --color-ink-950: #0a1328;
+  /* Cool neutrals — Umbra light canvas (constant H 264.481) */
+  --color-ink-50: oklch(0.979 0.003 264.481);
+  --color-ink-100: oklch(0.957 0.007 264.481);
+  --color-ink-200: oklch(0.924 0.013 264.481);
+  --color-ink-300: oklch(0.843 0.027 264.481);
+  --color-ink-400: oklch(0.713 0.052 264.481);
+  --color-ink-500: oklch(0.551 0.087 264.481);
+  --color-ink-600: oklch(0.446 0.108 264.481);
+  --color-ink-700: oklch(0.373 0.09 264.481);
+  --color-ink-800: oklch(0.278 0.067 264.481);
+  --color-ink-900: oklch(0.229 0.055 264.481);
+  --color-ink-950: oklch(0.191 0.046 264.481);
 
-  /* Umbra sky / cyan brand ramp (#00ADEF family) */
-  --color-signal-50: #ebf8ff;
-  --color-signal-100: #d6f1ff;
-  --color-signal-200: #a8e4ff;
-  --color-signal-300: #6ad0ff;
-  --color-signal-400: #2eb8f5;
-  --color-signal-500: #00adef;
-  --color-signal-600: #0095d6;
-  --color-signal-700: #0077b0;
-  --color-signal-800: #065a87;
-  --color-signal-900: #0a4a6e;
-  --color-signal-950: #072f47;
+  /* Umbra sky / cyan brand ramp — base #00ADEF, constant H 234.915 */
+  --color-signal-50: oklch(0.971 0.016 234.915);
+  --color-signal-100: oklch(0.943 0.032 234.915);
+  --color-signal-200: oklch(0.887 0.065 234.915);
+  --color-signal-300: oklch(0.814 0.11 234.915);
+  --color-signal-400: oklch(0.739 0.157 234.915);
+  --color-signal-500: oklch(0.706 0.15 234.915);
+  --color-signal-600: oklch(0.636 0.135 234.915);
+  --color-signal-700: oklch(0.543 0.115 234.915);
+  --color-signal-800: oklch(0.447 0.095 234.915);
+  --color-signal-900: oklch(0.391 0.083 234.915);
+  --color-signal-950: oklch(0.292 0.062 234.915);
 
-  --color-rose-50: #fff1f2;
-  --color-rose-100: #ffe4e6;
-  --color-rose-500: #f43f5e;
-  --color-rose-600: #e11d48;
-  --color-rose-700: #be123c;
+  /* Danger rose — constant H 17.585; 700 darkened for soft-bg text */
+  --color-rose-50: oklch(0.969 0.013 17.585);
+  --color-rose-100: oklch(0.941 0.026 17.585);
+  --color-rose-500: oklch(0.645 0.219 17.585);
+  --color-rose-600: oklch(0.586 0.222 17.585);
+  --color-rose-700: oklch(0.42 0.151 17.585);
 
-  --color-surface: #f7f8fa;
-  --color-surface-raised: #ffffff;
-  --color-surface-muted: #f1f3f6;
-  --color-surface-ink: #0e1b39;
-  --color-border: #e2e6ec;
-  --color-border-strong: #c5ccd6;
-  --color-text: #0e1b39;
-  --color-text-muted: #6b7280;
-  --color-text-inverse: #ffffff;
-  --color-accent: #00adef;
-  --color-accent-hover: #0095d6;
-  --color-accent-soft: #ebf8ff;
-  --color-accent-glow: rgb(0 173 239 / 0.35);
-  --color-danger: #e11d48;
-  --color-danger-soft: #ffe4e6;
-  --color-success: #059669;
-  --color-success-soft: #ecfdf5;
+  --color-surface: oklch(0.979 0.003 264.481);
+  --color-surface-raised: oklch(1 0 0);
+  --color-surface-muted: oklch(0.963 0.006 264.481);
+  --color-surface-ink: oklch(0.229 0.055 264.481);
+  --color-border: oklch(0.924 0.013 264.481);
+  --color-border-strong: oklch(0.843 0.027 264.481);
+  --color-text: oklch(0.229 0.055 264.481);
+  /* ink-600: L < 0.45 for light canvases (APCA-oriented gap) */
+  --color-text-muted: oklch(0.446 0.108 264.481);
+  --color-text-inverse: oklch(1 0 0);
+  --color-accent: oklch(0.706 0.15 234.915);
+  --color-accent-hover: oklch(0.636 0.135 234.915);
+  --color-accent-soft: oklch(0.971 0.016 234.915);
+  --color-accent-glow: oklch(0.706 0.15 234.915 / 0.35);
+  --color-danger: oklch(0.586 0.222 17.585);
+  --color-danger-soft: oklch(0.969 0.013 17.585);
+  /* Success aligned to accent L + same chroma % of max */
+  --color-success: oklch(0.706 0.152 163.225);
+  --color-success-soft: oklch(0.979 0.01 163.225);
 
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -61,9 +64,9 @@
   --radius-2xl: 32px;
   --radius-pill: 9999px;
 
-  --shadow-sm: 0 1px 2px rgb(14 27 57 / 0.04);
-  --shadow-md: 0 8px 28px rgb(14 27 57 / 0.06);
-  --shadow-lg: 0 20px 50px rgb(14 27 57 / 0.08);
+  --shadow-sm: 0 1px 2px oklch(0.229 0.055 264.481 / 0.04);
+  --shadow-md: 0 8px 28px oklch(0.229 0.055 264.481 / 0.06);
+  --shadow-lg: 0 20px 50px oklch(0.229 0.055 264.481 / 0.08);
 
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
 }
@@ -98,20 +101,20 @@ body {
 
 /* Soft white canvas + cyan aurora + faint grid (Umbra-like) */
 .app-atmosphere {
-  background-color: #ffffff;
+  background-color: oklch(1 0 0);
   background-image:
-    radial-gradient(ellipse 70% 50% at 85% 5%, rgb(0 173 239 / 0.14), transparent 55%),
-    radial-gradient(ellipse 45% 40% at 5% 95%, rgb(168 228 255 / 0.35), transparent 50%),
-    radial-gradient(rgb(14 27 57 / 0.045) 1px, transparent 1px);
+    radial-gradient(ellipse 70% 50% at 85% 5%, oklch(0.706 0.15 234.915 / 0.14), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 5% 95%, oklch(0.887 0.065 234.915 / 0.35), transparent 50%),
+    radial-gradient(oklch(0.229 0.055 264.481 / 0.045) 1px, transparent 1px);
   background-size: auto, auto, 24px 24px;
 }
 
 .ink-atmosphere {
-  background-color: #ffffff;
+  background-color: oklch(1 0 0);
   background-image:
-    radial-gradient(ellipse 70% 50% at 85% 5%, rgb(0 173 239 / 0.14), transparent 55%),
-    radial-gradient(ellipse 45% 40% at 5% 95%, rgb(168 228 255 / 0.35), transparent 50%),
-    radial-gradient(rgb(14 27 57 / 0.045) 1px, transparent 1px);
+    radial-gradient(ellipse 70% 50% at 85% 5%, oklch(0.706 0.15 234.915 / 0.14), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 5% 95%, oklch(0.887 0.065 234.915 / 0.35), transparent 50%),
+    radial-gradient(oklch(0.229 0.055 264.481 / 0.045) 1px, transparent 1px);
   background-size: auto, auto, 24px 24px;
 }
 

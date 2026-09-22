@@ -4,6 +4,7 @@ import type { AlertStatus, FraudAlert } from "../../lib/adminTypes";
 import AssistantPanel from "./AssistantPanel";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Modal } from "../../components/ui/Modal";
+import { TransactionId } from "../../components/ui/TransactionId";
 
 const STATUS_OPTIONS: AlertStatus[] = ["open", "investigating", "resolved", "false_positive"];
 
@@ -63,8 +64,8 @@ export default function FraudAlertsTab() {
                     · risk {alert.risk_score}
                   </span>
                 </p>
-                <p className="mt-0.5 font-mono text-xs text-[var(--color-text-muted)]">
-                  {alert.transaction_public_id}
+                <p className="mt-1.5">
+                  <TransactionId id={alert.transaction_public_id} copyable={false} />
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {alert.triggered_rules.slice(0, 3).map((rule) => (
@@ -113,13 +114,16 @@ export default function FraudAlertsTab() {
       >
         {active && (
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Risk score{" "}
-              <span className={`font-semibold tabular ${riskTone(active.risk_score)}`}>
-                {active.risk_score}
-              </span>{" "}
-              · {active.transaction_public_id}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
+              <span>
+                Risk score{" "}
+                <span className={`font-semibold tabular ${riskTone(active.risk_score)}`}>
+                  {active.risk_score}
+                </span>
+              </span>
+              <span aria-hidden>·</span>
+              <TransactionId id={active.transaction_public_id} />
+            </div>
             <ul className="space-y-2 text-sm">
               {active.triggered_rules.map((rule) => (
                 <li key={rule.rule_name} className="rounded-[var(--radius-md)] bg-[var(--color-ink-50)] p-3">

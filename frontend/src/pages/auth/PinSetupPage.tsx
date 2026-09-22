@@ -1,7 +1,9 @@
+import { SlotText } from "slot-text/react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/useAuth";
+import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
 import { AuthLayout } from "../../components/ui/AuthLayout";
 import { Button } from "../../components/ui/Button";
@@ -27,10 +29,12 @@ export default function PinSetupPage() {
     setError(null);
 
     if (pin !== confirmPin) {
+      cue.error();
       setError("PINs do not match.");
       return;
     }
     if (!/^\d{4,6}$/.test(pin)) {
+      cue.error();
       setError("PIN must be 4–6 digits.");
       return;
     }
@@ -39,8 +43,10 @@ export default function PinSetupPage() {
     try {
       await api.post("/pin/setup", { pin });
       await refreshUser();
+      cue.success("auth");
       navigate("/dashboard", { replace: true });
     } catch (err: unknown) {
+      cue.error();
       setError(extractErrorMessage(err, "Could not set PIN."));
     } finally {
       setSubmitting(false);
@@ -85,7 +91,10 @@ export default function PinSetupPage() {
         {error && <InlineAlert>{error}</InlineAlert>}
 
         <Button type="submit" disabled={submitting} fullWidth>
-          {submitting ? "Saving…" : "Set PIN"}
+          <SlotText
+            text={submitting ? "Saving…" : "Set PIN"}
+            options={{ rollBy: "word", duration: 200, stagger: 28 }}
+          />
         </Button>
       </form>
     </AuthLayout>

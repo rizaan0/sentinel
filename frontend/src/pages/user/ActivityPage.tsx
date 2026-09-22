@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
 import type { PaginatedTransactions, TransactionSummary } from "../../lib/types";
 import { formatWhen } from "../../lib/recentPeople";
@@ -72,6 +73,7 @@ export default function ActivityPage() {
             type="button"
             role="tab"
             aria-selected={filter === value}
+            data-cuelume-toggle
             onClick={() => setFilter(value)}
             className={`min-h-10 rounded-[var(--radius-pill)] px-4 text-sm font-semibold capitalize transition-colors ${
               filter === value
@@ -129,7 +131,10 @@ export default function ActivityPage() {
           disabled={loadingMore}
           onClick={() => void loadMore()}
         >
-          {loadingMore ? "Loading…" : "Load more"}
+          <SlotText
+            text={loadingMore ? "Loading…" : "Load more"}
+            options={{ rollBy: "word", duration: 200, stagger: 28 }}
+          />
         </Button>
       )}
     </div>

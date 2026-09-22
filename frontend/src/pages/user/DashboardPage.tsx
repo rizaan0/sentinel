@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
 import type { PaginatedTransactions } from "../../lib/types";
 import { useAuth } from "../../lib/useAuth";
 import { formatWhen, recentPeopleFromHistory } from "../../lib/recentPeople";
+import { AccountNumber } from "../../components/ui/AccountNumber";
 import { Amount } from "../../components/ui/Amount";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { CopyButton } from "../../components/ui/CopyButton";
 import { EmptyState } from "../../components/ui/EmptyState";
 
 export default function DashboardPage() {
@@ -29,19 +30,29 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <section className="surface-card p-5 shadow-[var(--shadow-md)]">
-        <p className="label-accent">Available balance</p>
-        <p className="mt-2 text-4xl font-extrabold tracking-tight tabular text-[var(--color-text)]">
-          {user?.balance}{" "}
-          <span className="text-lg font-semibold text-[var(--color-text-muted)]">ST</span>
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <p className="font-mono text-xs text-[var(--color-text-muted)]">{user?.account_number}</p>
-          {user?.account_number && <CopyButton value={user.account_number} label="Copy" />}
-        </div>
-        <div className="mt-5">
-          <Link to="/send" className="btn-primary">
+    <div className="space-y-8">
+      <section className="surface-card shadow-[var(--shadow-md)]">
+        <div className="flex flex-col gap-8 p-6">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-[var(--color-text-muted)]">Available balance</p>
+            <div className="flex items-baseline gap-2.5">
+              <SlotText
+                text={user?.balance ?? "—"}
+                className="text-[2.5rem] font-semibold leading-none tracking-tight tabular text-[var(--color-text)] sm:text-5xl"
+                options={{ duration: 240, stagger: 24, bounce: 0.4 }}
+              />
+              <span className="text-base font-medium text-[var(--color-text-muted)]">ST</span>
+            </div>
+          </div>
+
+          {user?.account_number && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--color-text-muted)]">Your account</p>
+              <AccountNumber number={user.account_number} />
+            </div>
+          )}
+
+          <Link to="/send" className="btn-primary w-full">
             Send money
           </Link>
         </div>

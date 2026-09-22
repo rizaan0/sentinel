@@ -1,3 +1,5 @@
+import { SlotText } from "slot-text/react";
+
 type Props = {
   value: string | number;
   signed?: boolean;
@@ -30,9 +32,10 @@ export function Amount({
         : "text-[var(--color-text)]";
 
   return (
-    <span className={`tabular font-bold ${SIZE[size]} ${color}`}>
-      {prefix}
-      {value} {suffix}
-    </span>
+    <SlotText
+      text={`${prefix}${value} ${suffix}`}
+      className={`tabular font-bold ${SIZE[size]} ${color}`}
+      options={{ duration: 220, stagger: 28, bounce: 0.45 }}
+    />
   );
 }

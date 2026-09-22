@@ -1,3 +1,5 @@
+import { SlotText } from "slot-text/react";
+
 type Step = { id: string; label: string };
 
 type Props = {
@@ -28,8 +30,16 @@ export function Stepper({ steps, current }: Props) {
               }`}
               aria-current={active ? "step" : undefined}
             >
-              <span className="tabular">{done ? "✓" : index + 1}</span>
-              <span className="hidden truncate sm:inline">{step.label}</span>
+              <SlotText
+                text={done ? "✓" : String(index + 1)}
+                className="tabular"
+                options={{ duration: 200, stagger: 20, bounce: 0.5 }}
+              />
+              <SlotText
+                text={step.label}
+                className="hidden truncate sm:inline"
+                options={{ rollBy: "word", duration: 220, stagger: 30 }}
+              />
             </span>
           </li>
         );

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../../lib/api";
 import type { AssistantLogEntry } from "../../lib/adminTypes";
+import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
 import { Button } from "../../components/ui/Button";
 import { InlineAlert } from "../../components/ui/InlineAlert";
@@ -24,6 +25,7 @@ export default function AssistantPanel({ transactionId, accountNumber }: Assista
     event.preventDefault();
     setError(null);
     setSubmitting(true);
+    cue.loading();
     try {
       const response = await api.post<AssistantLogEntry>("/assistant/ask", {
         question,
@@ -32,7 +34,9 @@ export default function AssistantPanel({ transactionId, accountNumber }: Assista
       });
       setHistory((prev) => [...prev, response.data]);
       setQuestion("");
+      cue.success();
     } catch (err) {
+      cue.error();
       setError(extractErrorMessage(err, "The AI Investigation Assistant is unavailable."));
     } finally {
       setSubmitting(false);

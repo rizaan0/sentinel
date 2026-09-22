@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
+import { cue } from "../../lib/cue";
 import type { RiskPrediction } from "../../lib/adminTypes";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -22,9 +24,13 @@ export default function PredictiveAnalyticsTab() {
 
   const runNow = async () => {
     setRunning(true);
+    cue.loading();
     try {
       await api.post("/predictions/run");
       load();
+      cue.success();
+    } catch {
+      cue.error();
     } finally {
       setRunning(false);
     }
@@ -40,7 +46,10 @@ export default function PredictiveAnalyticsTab() {
           </p>
         </div>
         <Button onClick={runNow} disabled={running}>
-          {running ? "Running…" : "Run now"}
+          <SlotText
+            text={running ? "Running…" : "Run now"}
+            options={{ rollBy: "word", duration: 200, stagger: 28 }}
+          />
         </Button>
       </div>
 
@@ -69,7 +78,10 @@ export default function PredictiveAnalyticsTab() {
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${LEVEL_STYLE[p.predicted_risk_level]}`}
               >
-                {p.predicted_risk_level}
+                <SlotText
+                  text={p.predicted_risk_level}
+                  options={{ duration: 200, stagger: 24 }}
+                />
               </span>
               <p className="mt-1 text-xs text-[var(--color-text-muted)] tabular">
                 trend {p.trend_score.toFixed(1)}

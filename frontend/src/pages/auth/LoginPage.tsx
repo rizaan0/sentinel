@@ -1,6 +1,8 @@
+import { SlotText } from "slot-text/react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/useAuth";
+import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
 import { AuthLayout } from "../../components/ui/AuthLayout";
 import { Button } from "../../components/ui/Button";
@@ -23,12 +25,14 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const user = await login(email, password);
+      cue.success("auth");
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
       } else {
         navigate(user.pin_is_set ? "/dashboard" : "/pin-setup", { replace: true });
       }
     } catch (err: unknown) {
+      cue.error();
       setError(extractErrorMessage(err, "Incorrect email or password."));
     } finally {
       setSubmitting(false);
@@ -64,7 +68,10 @@ export default function LoginPage() {
         {error && <InlineAlert>{error}</InlineAlert>}
 
         <Button type="submit" disabled={submitting} fullWidth>
-          {submitting ? "Logging in…" : "Log in"}
+          <SlotText
+            text={submitting ? "Logging in…" : "Log in"}
+            options={{ rollBy: "word", duration: 200, stagger: 28 }}
+          />
         </Button>
 
         <p className="text-center text-sm text-[var(--color-text-muted)]">

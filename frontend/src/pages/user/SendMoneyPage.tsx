@@ -1,20 +1,24 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { chromatic } from "slot-text";
+import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
+import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
 import type { PaginatedTransactions, RecipientResult, TransactionReceipt } from "../../lib/types";
 import { useAuth } from "../../lib/useAuth";
 import { recentPeopleFromHistory } from "../../lib/recentPeople";
+import { AccountNumber } from "../../components/ui/AccountNumber";
 import { Amount } from "../../components/ui/Amount";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { CopyButton } from "../../components/ui/CopyButton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Field } from "../../components/ui/Field";
 import { InlineAlert } from "../../components/ui/InlineAlert";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Stepper } from "../../components/ui/Stepper";
+import { TransactionId } from "../../components/ui/TransactionId";
 
 type Step = "search" | "amount" | "review" | "receipt";
 
@@ -69,19 +73,23 @@ export default function SendMoneyPage() {
     setError(null);
     const q = query.trim();
     if (!q) {
+      cue.error();
       setError("Enter a name or account number.");
       return;
     }
     setSubmitting(true);
+    cue.loading();
     try {
       const response = await api.get<RecipientResult[]>("/transactions/search", {
         params: { q },
       });
       setResults(response.data);
       if (response.data.length === 0) {
+        cue.error();
         setError("No matching accounts found.");
       }
     } catch (err) {
+      cue.error();
       setError(extractErrorMessage(err, "Search failed."));
       setResults([]);
     } finally {
@@ -100,10 +108,12 @@ export default function SendMoneyPage() {
     setError(null);
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed <= 0) {
+      cue.error();
       setError("Enter a valid amount greater than zero.");
       return;
     }
     if (remaining !== null && remaining < 0) {
+      cue.error();
       setError("Amount exceeds your available balance.");
       return;
     }
@@ -114,10 +124,12 @@ export default function SendMoneyPage() {
     event.preventDefault();
     setError(null);
     if (!/^\d{4,6}$/.test(pin)) {
+      cue.error();
       setError("Enter your 4–6 digit Transaction PIN.");
       return;
     }
     setSubmitting(true);
+    cue.loading();
     try {
       const response = await api.post<TransactionReceipt>("/transactions/transfer", {
         recipient_account_number: recipient!.account_number,
@@ -128,8 +140,10 @@ export default function SendMoneyPage() {
       setReceipt(response.data);
       setPinOpen(false);
       setStep("receipt");
+      cue.success("payment");
       await refreshUser();
     } catch (err) {
+      cue.error();
       setError(extractErrorMessage(err, "Transfer failed."));
     } finally {
       setSubmitting(false);
@@ -211,9 +225,11 @@ export default function SendMoneyPage() {
                     <Avatar name={person.full_name} size="sm" />
                     <div className="min-w-0">
                       <p className="font-medium">{person.full_name}</p>
-                      <p className="font-mono text-xs text-[var(--color-text-muted)]">
-                        {person.account_number}
-                      </p>
+                      <AccountNumber
+                        number={person.account_number}
+                        copyable={false}
+                        className="mt-0.5 text-[var(--color-text-muted)]"
+                      />
                     </div>
                   </button>
                 </li>
@@ -249,12 +265,21 @@ export default function SendMoneyPage() {
               />
             </Field>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Available: <span className="tabular font-semibold">{user?.balance} ST</span>
+              Available:{" "}
+              <SlotText
+                text={`${user?.balance ?? "—"} ST`}
+                className="tabular font-semibold text-[var(--color-text)]"
+                options={{ duration: 200, stagger: 20 }}
+              />
               {remaining !== null && Number.isFinite(remaining) && (
                 <>
                   {" "}
                   · After:{" "}
-                  <span className="tabular font-semibold">{remaining.toFixed(2)} ST</span>
+                  <SlotText
+                    text={`${remaining.toFixed(2)} ST`}
+                    className="tabular font-semibold text-[var(--color-text)]"
+                    options={{ duration: 200, stagger: 20 }}
+                  />
                 </>
               )}
             </p>
@@ -306,7 +331,10 @@ export default function SendMoneyPage() {
             }}
             footer={
               <Button type="submit" form="pin-form" disabled={submitting} fullWidth>
-                {submitting ? "Processing…" : `Pay ${amount} ST`}
+                <SlotText
+                  text={submitting ? "Processing…" : `Pay ${amount} ST`}
+                  options={{ rollBy: "word", duration: 200, stagger: 24 }}
+                />
               </Button>
             }
           >
@@ -339,18 +367,31 @@ export default function SendMoneyPage() {
       {step === "receipt" && receipt && (
         <div className="space-y-4">
           <div className="surface-card space-y-4 bg-[var(--color-accent-soft)] p-5 text-center">
-            <p className="text-sm font-bold text-[var(--color-accent)]">Transfer successful</p>
+            <p className="text-sm font-bold text-[var(--color-accent)]">
+              <SlotText
+                text="Transfer successful"
+                options={{
+                  rollBy: "word",
+                  direction: "up",
+                  color: chromatic({ from: 200 }),
+                  duration: 240,
+                  stagger: 40,
+                }}
+              />
+            </p>
             <Amount value={receipt.amount} size="xl" />
             <p className="text-sm text-[var(--color-text-muted)]">
               to {receipt.receiver_name}
             </p>
           </div>
-          <dl className="surface-card divide-y divide-[var(--color-border)] text-sm">
-            <Row label="Transaction ID" value={receipt.transaction_id} mono />
+          <div className="surface-card divide-y divide-[var(--color-border)] text-sm">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="shrink-0 text-[var(--color-text-muted)]">Reference</span>
+              <TransactionId id={receipt.transaction_id} />
+            </div>
             <Row label="New balance" value={`${receipt.balance_after} ST`} />
             {receipt.remark && <Row label="Remark" value={receipt.remark} />}
-          </dl>
-          <CopyButton value={receipt.transaction_id} label="Copy transaction ID" />
+          </div>
           <Button onClick={() => navigate("/dashboard")} fullWidth>
             Done
           </Button>
@@ -385,7 +426,7 @@ function RecipientCard({
       <div className="min-w-0 flex-1">
         <p className="text-xs text-[var(--color-text-muted)]">Sending to</p>
         <p className="truncate font-medium">{recipient.full_name}</p>
-        <p className="font-mono text-xs text-[var(--color-text-muted)]">{recipient.account_number}</p>
+        <AccountNumber number={recipient.account_number} copyable={false} />
       </div>
       {onChange && (
         <Button variant="ghost" onClick={onChange} className="!min-h-10 text-xs">
@@ -396,13 +437,11 @@ function RecipientCard({
   );
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4 px-4 py-3">
       <span className="text-[var(--color-text-muted)]">{label}</span>
-      <span className={mono ? "max-w-[60%] break-all text-right font-mono text-xs" : "text-right font-medium"}>
-        {value}
-      </span>
+      <span className="text-right font-medium">{value}</span>
     </div>
   );
 }

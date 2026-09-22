@@ -1,7 +1,9 @@
+import { SlotText } from "slot-text/react";
 import { useAuth } from "../../lib/useAuth";
+import { cue } from "../../lib/cue";
+import { AccountNumber } from "../../components/ui/AccountNumber";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { CopyButton } from "../../components/ui/CopyButton";
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -24,26 +26,41 @@ export default function ProfilePage() {
       </section>
 
       <section className="surface-card divide-y divide-[var(--color-border)] text-sm">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <p className="text-[var(--color-text-muted)]">Account number</p>
-            <p className="mt-0.5 font-mono font-medium">{user?.account_number}</p>
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-[var(--color-text-muted)]">Your account</p>
+            {user?.account_number && <AccountNumber number={user.account_number} />}
           </div>
-          {user?.account_number && <CopyButton value={user.account_number} />}
         </div>
-        <div className="px-4 py-3">
+        <div className="space-y-1.5 px-4 py-3.5">
           <p className="text-[var(--color-text-muted)]">Balance</p>
-          <p className="mt-0.5 tabular text-lg font-semibold">{user?.balance} ST</p>
+          <div className="flex items-baseline gap-1.5">
+            <SlotText
+              text={user?.balance ?? "—"}
+              className="tabular text-lg font-semibold"
+              options={{ duration: 220, stagger: 24 }}
+            />
+            <span className="text-sm font-medium text-[var(--color-text-muted)]">ST</span>
+          </div>
         </div>
-        <div className="px-4 py-3">
+        <div className="space-y-1.5 px-4 py-3.5">
           <p className="text-[var(--color-text-muted)]">Transaction PIN</p>
-          <p className="mt-0.5 font-medium">
-            {user?.pin_is_set ? "Set" : "Not set"}
-          </p>
+          <SlotText
+            text={user?.pin_is_set ? "Set" : "Not set"}
+            className="inline-block font-medium"
+            options={{ rollBy: "word", duration: 220, stagger: 30 }}
+          />
         </div>
       </section>
 
-      <Button variant="secondary" onClick={logout} fullWidth>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          cue.dismiss();
+          logout();
+        }}
+        fullWidth
+      >
         Log out
       </Button>
     </div>

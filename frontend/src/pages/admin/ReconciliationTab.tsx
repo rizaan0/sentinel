@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
+import { cue } from "../../lib/cue";
 import type { ReconciliationReport } from "../../lib/adminTypes";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -18,9 +20,13 @@ export default function ReconciliationTab() {
 
   const runNow = async () => {
     setRunning(true);
+    cue.loading();
     try {
       await api.post("/reconciliation/run");
       load();
+      cue.success();
+    } catch {
+      cue.error();
     } finally {
       setRunning(false);
     }
@@ -36,7 +42,10 @@ export default function ReconciliationTab() {
           </p>
         </div>
         <Button onClick={runNow} disabled={running}>
-          {running ? "Running…" : "Run now"}
+          <SlotText
+            text={running ? "Running…" : "Run now"}
+            options={{ rollBy: "word", duration: 200, stagger: 28 }}
+          />
         </Button>
       </div>
 
@@ -59,7 +68,10 @@ export default function ReconciliationTab() {
                     : "bg-[var(--color-danger-soft)] text-[var(--color-rose-700)]"
                 }`}
               >
-                {report.status.replace("_", " ")}
+                <SlotText
+                  text={report.status.replace("_", " ")}
+                  options={{ rollBy: "word", duration: 200, stagger: 28 }}
+                />
               </span>
               <span className="text-xs text-[var(--color-text-muted)]">
                 {new Date(report.created_at).toLocaleString()} · {report.triggered_by}

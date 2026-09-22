@@ -36,6 +36,7 @@ export function UserShell() {
             <li key={item.to} className="flex-1">
               <NavLink
                 to={item.to}
+                data-cuelume-toggle
                 className={({ isActive }) =>
                   `flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-pill)] mx-1 text-xs font-semibold transition-colors duration-150 ${
                     isActive
