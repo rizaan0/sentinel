@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="app-atmosphere min-h-dvh">
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface-raised)]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <BrandMark size="sm" />
             <span className="hidden rounded-[var(--radius-pill)] bg-[var(--color-accent-soft)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-accent)] sm:inline">
@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
         <nav
-          className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6"
+          className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8"
           aria-label="Admin sections"
         >
           {TABS.map((t) => (
@@ -72,7 +72,7 @@ export default function AdminDashboardPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {tab === "overview" && <OverviewTab />}
         {tab === "live" && <LiveFeedTab />}
         {tab === "alerts" && <FraudAlertsTab />}
