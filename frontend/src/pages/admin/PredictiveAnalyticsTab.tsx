@@ -60,6 +60,7 @@ export default function PredictiveAnalyticsTab() {
         <EmptyState
           title="No at-risk trends yet"
           description="Predictions appear once users have recent fraud alerts to trend on."
+          symbol="exclamationmark.circle"
         />
       )}
 
