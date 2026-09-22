@@ -58,32 +58,33 @@ export default function ActivityPage() {
   const hasMore = (history?.items.length ?? 0) < (history?.total ?? 0);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Activity</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Your complete ST Coin transfer history.
-        </p>
-      </div>
-
-      <div className="flex gap-2" role="tablist" aria-label="Filter transactions">
-        {(["all", "sent", "received"] as Filter[]).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={filter === value}
-            data-cuelume-toggle
-            onClick={() => setFilter(value)}
-            className={`min-h-10 rounded-[var(--radius-pill)] px-4 text-sm font-semibold capitalize transition-colors ${
-              filter === value
-                ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-                : "bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]"
-            }`}
-          >
-            {value}
-          </button>
-        ))}
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Activity</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            Your complete ST Coin transfer history.
+          </p>
+        </div>
+        <div className="flex gap-2" role="tablist" aria-label="Filter transactions">
+          {(["all", "sent", "received"] as Filter[]).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={filter === value}
+              data-cuelume-toggle
+              onClick={() => setFilter(value)}
+              className={`min-h-10 rounded-[var(--radius-pill)] px-4 text-sm font-semibold capitalize transition-colors ${
+                filter === value
+                  ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                  : "bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]"
+              }`}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
@@ -92,8 +93,9 @@ export default function ActivityPage() {
         <EmptyState
           title="Nothing here yet"
           description="Transfers you send or receive will appear in this list."
+          symbol="list.bullet"
           action={
-            <Button onClick={() => navigate("/send")} fullWidth>
+            <Button onClick={() => navigate("/send")} className="sm:!w-auto">
               Send money
             </Button>
           }
@@ -106,7 +108,7 @@ export default function ActivityPage() {
             <button
               type="button"
               onClick={() => navigate(`/activity/${tx.transaction_id}`)}
-              className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--color-ink-50)]"
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--color-ink-50)] sm:px-5"
             >
               <Avatar name={tx.counterparty_name} size="sm" />
               <div className="min-w-0 flex-1">
@@ -125,17 +127,19 @@ export default function ActivityPage() {
       </ul>
 
       {hasMore && (
-        <Button
-          variant="secondary"
-          fullWidth
-          disabled={loadingMore}
-          onClick={() => void loadMore()}
-        >
-          <SlotText
-            text={loadingMore ? "Loading…" : "Load more"}
-            options={{ rollBy: "word", duration: 200, stagger: 28 }}
-          />
-        </Button>
+        <div className="flex justify-center">
+          <Button
+            variant="secondary"
+            disabled={loadingMore}
+            onClick={() => void loadMore()}
+            className="min-w-40"
+          >
+            <SlotText
+              text={loadingMore ? "Loading…" : "Load more"}
+              options={{ rollBy: "word", duration: 200, stagger: 28 }}
+            />
+          </Button>
+        </div>
       )}
     </div>
   );
