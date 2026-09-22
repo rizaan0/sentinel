@@ -1,4 +1,5 @@
 import { SlotText } from "slot-text/react";
+import { SfIcon } from "./icons";
 
 type Step = { id: string; label: string };
 
@@ -21,7 +22,7 @@ export function Stepper({ steps, current }: Props) {
         return (
           <li key={step.id} className="min-w-0 flex-1">
             <span
-              className={`flex min-h-9 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-2 text-xs font-semibold transition-colors ${
+              className={`flex min-h-9 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-2 text-xs font-semibold tracking-tight transition-colors duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
                 active
                   ? "bg-[var(--color-surface-raised)] text-[var(--color-accent)] shadow-[var(--shadow-sm)]"
                   : done
@@ -30,11 +31,15 @@ export function Stepper({ steps, current }: Props) {
               }`}
               aria-current={active ? "step" : undefined}
             >
-              <SlotText
-                text={done ? "✓" : String(index + 1)}
-                className="tabular"
-                options={{ duration: 200, stagger: 20, bounce: 0.5 }}
-              />
+              {done ? (
+                <SfIcon name="checkmark" weight="semibold" size={14} />
+              ) : (
+                <SlotText
+                  text={String(index + 1)}
+                  className="tabular"
+                  options={{ duration: 200, stagger: 20, bounce: 0.5 }}
+                />
+              )}
               <SlotText
                 text={step.label}
                 className="hidden truncate sm:inline"
