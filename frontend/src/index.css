@@ -106,6 +106,31 @@ body {
   scale: -1 1;
 }
 
+/* Brand mark interaction — Cuelume-style hover spin + press */
+.brand-mark-dot {
+  cursor: pointer;
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brand-mark-dot:hover {
+    transform: scale(1.12);
+  }
+}
+
+.brand-mark-dot:active {
+  transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark-dot,
+  .brand-mark-dot:hover,
+  .brand-mark-dot:active {
+    transform: none;
+    transition: none;
+  }
+}
+
 #root {
   min-height: 100dvh;
 }
@@ -192,5 +217,71 @@ body {
 
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Apple-style floating liquid glass dock */
+  .liquid-glass {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 1.75rem;
+    background:
+      linear-gradient(
+        160deg,
+        oklch(1 0 0 / 0.58) 0%,
+        oklch(1 0 0 / 0.32) 55%,
+        oklch(0.979 0.003 264.481 / 0.28) 100%
+      );
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    border: 1px solid oklch(1 0 0 / 0.45);
+    box-shadow:
+      0 16px 40px oklch(0.229 0.055 264.481 / 0.12),
+      0 2px 10px oklch(0.229 0.055 264.481 / 0.06),
+      inset 0 1px 0 oklch(1 0 0 / 0.75),
+      inset 0 -0.5px 0 oklch(0.229 0.055 264.481 / 0.06);
+  }
+
+  .liquid-glass::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, oklch(1 0 0 / 0.4) 0%, transparent 45%);
+  }
+
+  .liquid-glass > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .liquid-glass-item {
+    transition:
+      color 150ms cubic-bezier(0.2, 0, 0, 1),
+      background-color 150ms cubic-bezier(0.2, 0, 0, 1),
+      transform 150ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .liquid-glass-item:hover {
+    color: var(--color-text);
+  }
+
+  .liquid-glass-item:active {
+    transform: scale(0.96);
+  }
+
+  .liquid-glass-item.is-active {
+    background: oklch(1 0 0 / 0.55);
+    box-shadow:
+      0 1px 2px oklch(0.229 0.055 264.481 / 0.05),
+      inset 0 1px 0 oklch(1 0 0 / 0.85);
+  }
+
+  .liquid-glass-item:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 }
