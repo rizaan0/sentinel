@@ -8,6 +8,7 @@ import { Amount } from "../../components/ui/Amount";
 import { Avatar } from "../../components/ui/Avatar";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Button } from "../../components/ui/Button";
+import { PageHeader } from "../../components/ui/PageHeader";
 
 type Filter = "all" | "sent" | "received";
 
@@ -58,34 +59,32 @@ export default function ActivityPage() {
   const hasMore = (history?.items.length ?? 0) < (history?.total ?? 0);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Activity</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Your complete ST Coin transfer history.
-          </p>
-        </div>
-        <div className="flex gap-2" role="tablist" aria-label="Filter transactions">
-          {(["all", "sent", "received"] as Filter[]).map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={filter === value}
-              data-cuelume-toggle
-              onClick={() => setFilter(value)}
-              className={`min-h-10 rounded-[var(--radius-pill)] px-4 text-sm font-semibold capitalize transition-colors ${
-                filter === value
-                  ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-                  : "bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]"
-              }`}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-1 flex-col gap-5">
+      <PageHeader
+        title="Activity"
+        description="Your complete ST Coin transfer history."
+        actions={
+          <div className="flex gap-2" role="tablist" aria-label="Filter transactions">
+            {(["all", "sent", "received"] as Filter[]).map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={filter === value}
+                data-cuelume-toggle
+                onClick={() => setFilter(value)}
+                className={`min-h-10 rounded-[var(--radius-pill)] px-4 text-sm font-semibold capitalize transition-colors duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
+                  filter === value
+                    ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                    : "bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]"
+                }`}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {loading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
 
@@ -102,32 +101,34 @@ export default function ActivityPage() {
         />
       )}
 
-      <ul className="surface-card divide-y divide-[var(--color-border)] overflow-hidden">
-        {items.map((tx: TransactionSummary) => (
-          <li key={tx.transaction_id}>
-            <button
-              type="button"
-              onClick={() => navigate(`/activity/${tx.transaction_id}`)}
-              className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--color-ink-50)] sm:px-5"
-            >
-              <Avatar name={tx.counterparty_name} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{tx.counterparty_name}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {tx.direction === "sent" ? "Sent" : "Received"} · {formatWhen(tx.created_at)}
-                </p>
-                {tx.remark && (
-                  <p className="truncate text-xs text-[var(--color-text-muted)]">{tx.remark}</p>
-                )}
-              </div>
-              <Amount value={tx.amount} signed direction={tx.direction} size="sm" />
-            </button>
-          </li>
-        ))}
-      </ul>
+      {items.length > 0 && (
+        <ul className="surface-card divide-y divide-[var(--color-border)] overflow-hidden">
+          {items.map((tx: TransactionSummary) => (
+            <li key={tx.transaction_id}>
+              <button
+                type="button"
+                onClick={() => navigate(`/activity/${tx.transaction_id}`)}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--color-ink-50)] sm:px-5"
+              >
+                <Avatar name={tx.counterparty_name} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{tx.counterparty_name}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {tx.direction === "sent" ? "Sent" : "Received"} · {formatWhen(tx.created_at)}
+                  </p>
+                  {tx.remark && (
+                    <p className="truncate text-xs text-[var(--color-text-muted)]">{tx.remark}</p>
+                  )}
+                </div>
+                <Amount value={tx.amount} signed direction={tx.direction} size="sm" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {hasMore && (
-        <div className="flex justify-center">
+        <div className="flex justify-start">
           <Button
             variant="secondary"
             disabled={loadingMore}
