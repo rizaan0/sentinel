@@ -28,7 +28,7 @@ export default function ReceiptPage() {
 
   if (error) {
     return (
-      <div className="mx-auto w-full max-w-xl space-y-4">
+      <div className="w-full max-w-xl space-y-4">
         <InlineAlert>{error}</InlineAlert>
         <Button variant="secondary" onClick={() => navigate("/activity")} className="w-full sm:w-auto">
           Back to activity
@@ -39,7 +39,7 @@ export default function ReceiptPage() {
 
   if (!receipt) {
     return (
-      <p className="mx-auto w-full max-w-xl text-sm text-[var(--color-text-muted)]">
+      <p className="w-full max-w-xl text-sm text-[var(--color-text-muted)]">
         Loading receipt…
       </p>
     );
@@ -53,7 +53,7 @@ export default function ReceiptPage() {
       : receipt.sender_account_number;
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-5">
+    <div className="w-full max-w-xl space-y-5">
       <Link
         to="/activity"
         className="inline-flex items-center gap-1 text-sm font-medium tracking-tight text-[var(--color-accent)] underline-offset-2 hover:underline"
