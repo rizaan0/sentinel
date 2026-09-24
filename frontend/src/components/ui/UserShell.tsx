@@ -6,12 +6,12 @@ import { SfIconSwap, type SfSymbolName } from "./icons";
 
 const NAV: { to: string; label: string; symbol: SfSymbolName }[] = [
   { to: "/dashboard", label: "Home", symbol: "house" },
-  { to: "/send", label: "Send", symbol: "paperplane" },
   { to: "/activity", label: "Activity", symbol: "list.bullet" },
+  { to: "/send", label: "Send", symbol: "paperplane" },
   { to: "/profile", label: "Profile", symbol: "person.crop.circle" },
 ];
 
-/** Shared content width for authenticated pages. */
+/** Shared content + chrome width — one alignment edge for header, pages, and dock. */
 export const APP_RAIL = "mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8";
 
 export function UserShell() {
@@ -23,75 +23,56 @@ export function UserShell() {
 
   return (
     <div className="flex min-h-dvh w-full flex-col bg-[var(--color-surface)]">
-      <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white/95 backdrop-blur">
-        <div className={`${APP_RAIL} flex h-14 items-center justify-between gap-6 sm:h-16`}>
-          <div className="flex min-w-0 items-center gap-8">
-            <BrandMark size="sm" />
-            <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
-              {NAV.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  data-cuelume-toggle
-                  className={({ isActive }) =>
-                    `inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-3.5 py-2 text-sm font-semibold tracking-tight transition-colors duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
-                      isActive
-                        ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-                        : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <SfIconSwap name={item.symbol} active={isActive} size={18} />
-                      {item.label}
-                    </>
-                  )}
-                </NavLink>
-              ))}
-            </nav>
-          </div>
+      <header className="sticky top-0 z-20 border-b border-[var(--color-border)]/70 bg-[var(--color-surface)]/75 backdrop-blur-xl">
+        <div className={`${APP_RAIL} flex h-12 items-center justify-between gap-4 sm:h-14`}>
+          <BrandMark size="sm" />
           {user?.full_name && (
-            <p className="hidden truncate text-sm tracking-tight text-[var(--color-text-muted)] lg:block">
+            <p className="max-w-[40%] truncate text-sm font-medium tracking-tight text-[var(--color-text-muted)]">
               {user.full_name}
             </p>
           )}
         </div>
       </header>
 
-      <main className={`${APP_RAIL} flex-1 py-6 pb-24 sm:py-8 md:pb-10`}>
+      <main className={`${APP_RAIL} flex w-full flex-1 flex-col py-5 pb-[7.5rem] sm:py-6 sm:pb-32`}>
         <Outlet />
       </main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--color-border)] bg-white/95 backdrop-blur md:hidden"
-        aria-label="Primary"
-      >
-        <ul className="flex items-stretch justify-around px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
-          {NAV.map((item) => (
-            <li key={item.to} className="flex-1">
-              <NavLink
-                to={item.to}
-                data-cuelume-toggle
-                className={({ isActive }) =>
-                  `mx-1 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-pill)] text-[11px] font-semibold tracking-tight transition-colors duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
-                    isActive
-                      ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <SfIconSwap name={item.symbol} active={isActive} size={22} />
-                    {item.label}
-                  </>
-                )}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30">
+        <div
+          className={`${APP_RAIL} flex justify-center pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2`}
+        >
+          <nav
+            className="liquid-glass pointer-events-auto w-full max-w-lg"
+            aria-label="Primary"
+          >
+            <ul className="flex items-stretch gap-0.5 p-1.5">
+              {NAV.map((item) => (
+                <li key={item.to} className="min-w-0 flex-1">
+                  <NavLink
+                    to={item.to}
+                    data-cuelume-toggle
+                    className={({ isActive }) =>
+                      `liquid-glass-item flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-[1.15rem] px-1 text-[10px] font-semibold tracking-tight sm:min-h-12 sm:text-[11px] ${
+                        isActive
+                          ? "is-active text-[var(--color-accent)]"
+                          : "text-[var(--color-text-muted)]"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <SfIconSwap name={item.symbol} active={isActive} size={20} />
+                        <span className="truncate">{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
   );
 }
