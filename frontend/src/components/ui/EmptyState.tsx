@@ -16,7 +16,7 @@ export function EmptyState({
   symbol = "tray",
 }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-6 py-14 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-6 py-10 text-center sm:py-12">
       <span className="flex size-12 items-center justify-center rounded-full bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] shadow-[var(--shadow-sm)]">
         <SfIcon name={symbol} weight="regular" size={24} />
       </span>
