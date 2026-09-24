@@ -17,6 +17,7 @@ import { Field } from "../../components/ui/Field";
 import { InlineAlert } from "../../components/ui/InlineAlert";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { SfIcon } from "../../components/ui/icons";
 import { Stepper } from "../../components/ui/Stepper";
 import { TransactionId } from "../../components/ui/TransactionId";
@@ -159,98 +160,110 @@ export default function SendMoneyPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-7 lg:max-w-2xl">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Send money</h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-text-muted)]">
-          Pay anyone on Sentinel with ST Coins.
-        </p>
-      </div>
+    <div className="flex flex-1 flex-col gap-5">
+      <PageHeader
+        title="Send money"
+        description="Pay anyone on Sentinel with ST Coins."
+      />
 
-      {step !== "receipt" && <Stepper steps={STEPS} current={step} />}
+      {step !== "receipt" && (
+        <div className="w-full max-w-3xl">
+          <Stepper steps={STEPS} current={step} />
+        </div>
+      )}
 
       {error && step !== "review" && <InlineAlert>{error}</InlineAlert>}
 
       {step === "search" && (
-        <div className="space-y-5">
-          {recent.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-muted)]">Recent</h2>
-              <ul className="flex gap-3 overflow-x-auto pb-1">
-                {recent.map((person) => (
+        <div className="grid gap-5 lg:grid-cols-12 lg:items-start lg:gap-6">
+          <div className="flex flex-col gap-5 lg:col-span-7">
+            <form onSubmit={onSearch} className="space-y-3">
+              <Field
+                label="Search by name or account number"
+                htmlFor="recipient-q"
+                hint="Paste an account number or type part of a name."
+              >
+                <Input
+                  id="recipient-q"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  autoComplete="off"
+                  placeholder="e.g. Alex or 123456…"
+                />
+              </Field>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto sm:min-w-40">
+                <SfIcon name="magnifyingglass" weight="semibold" size={16} />
+                {submitting ? "Searching…" : "Search"}
+              </Button>
+            </form>
+
+            {results.length > 0 && (
+              <ul className="surface-card divide-y divide-[var(--color-border)] overflow-hidden">
+                {results.map((person) => (
                   <li key={person.account_number}>
                     <button
                       type="button"
                       onClick={() => selectRecipient(person)}
-                      className="flex w-20 flex-col items-center gap-2 rounded-[var(--radius-md)] p-2 hover:bg-[var(--color-ink-50)] active:scale-[0.96]"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--color-ink-50)]"
                     >
-                      <Avatar name={person.full_name} />
-                      <span className="w-full truncate text-center text-xs font-medium">
-                        {person.full_name.split(" ")[0]}
-                      </span>
+                      <Avatar name={person.full_name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-medium">{person.full_name}</p>
+                        <AccountNumber
+                          number={person.account_number}
+                          copyable={false}
+                          className="mt-0.5 text-[var(--color-text-muted)]"
+                        />
+                      </div>
                     </button>
                   </li>
                 ))}
               </ul>
-            </section>
-          )}
+            )}
 
-          <form onSubmit={onSearch} className="space-y-3">
-            <Field
-              label="Search by name or account number"
-              htmlFor="recipient-q"
-              hint="Paste an account number or type part of a name."
-            >
-              <Input
-                id="recipient-q"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                autoComplete="off"
-                placeholder="e.g. Alex or 123456…"
+            {recent.length === 0 && results.length === 0 && !submitting && (
+              <EmptyState
+                title="Find someone to pay"
+                description="Search by their name or full account number. Recent people appear here after your first transfer."
+                symbol="magnifyingglass"
               />
-            </Field>
-            <Button type="submit" disabled={submitting} fullWidth>
-              <SfIcon name="magnifyingglass" weight="semibold" size={16} />
-              {submitting ? "Searching…" : "Search"}
-            </Button>
-          </form>
+            )}
+          </div>
 
-          {results.length > 0 && (
-            <ul className="surface-card divide-y divide-[var(--color-border)] overflow-hidden">
-              {results.map((person) => (
-                <li key={person.account_number}>
-                  <button
-                    type="button"
-                    onClick={() => selectRecipient(person)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--color-ink-50)]"
-                  >
-                    <Avatar name={person.full_name} size="sm" />
-                    <div className="min-w-0">
-                      <p className="font-medium">{person.full_name}</p>
-                      <AccountNumber
-                        number={person.account_number}
-                        copyable={false}
-                        className="mt-0.5 text-[var(--color-text-muted)]"
-                      />
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {recent.length === 0 && results.length === 0 && !submitting && (
-            <EmptyState
-              title="Find someone to pay"
-              description="Search by their name or full account number. Recent people appear here after your first transfer."
-              symbol="magnifyingglass"
-            />
-          )}
+          <aside className="lg:col-span-5">
+            {recent.length > 0 ? (
+              <section className="surface-card space-y-3 p-4 sm:p-5">
+                <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-muted)]">
+                  Recent
+                </h2>
+                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3">
+                  {recent.map((person) => (
+                    <li key={person.account_number}>
+                      <button
+                        type="button"
+                        onClick={() => selectRecipient(person)}
+                        className="flex w-full flex-col items-center gap-1.5 rounded-[var(--radius-lg)] p-2 transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-[var(--color-accent-soft)] active:scale-[0.96]"
+                      >
+                        <Avatar name={person.full_name} />
+                        <span className="w-full truncate text-center text-xs font-medium">
+                          {person.full_name.split(" ")[0]}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : (
+              <div className="hidden rounded-[var(--radius-xl)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] p-5 text-sm leading-relaxed text-[var(--color-text-muted)] lg:block">
+                Recent recipients will appear here after your first transfer for one-tap send.
+              </div>
+            )}
+          </aside>
         </div>
       )}
 
       {step === "amount" && recipient && (
-        <form onSubmit={onContinueToReview} className="space-y-4">
+        <form onSubmit={onContinueToReview} className="w-full max-w-xl space-y-4">
           <RecipientCard recipient={recipient} onChange={() => setStep("search")} />
           <div className="surface-inset space-y-3 p-5">
             <p className="label-accent">You&apos;re sending</p>
@@ -307,7 +320,7 @@ export default function SendMoneyPage() {
       )}
 
       {step === "review" && recipient && (
-        <div className="space-y-4">
+        <div className="w-full max-w-xl space-y-4">
           <RecipientCard recipient={recipient} onChange={() => setStep("search")} />
           <div className="surface-card space-y-2 p-4 text-sm">
             <Row label="Amount" value={`${amount} ST`} />
@@ -369,7 +382,7 @@ export default function SendMoneyPage() {
       )}
 
       {step === "receipt" && receipt && (
-        <div className="space-y-4">
+        <div className="w-full max-w-xl space-y-4">
           <div className="surface-card space-y-4 bg-[var(--color-accent-soft)] p-5 text-center">
             <p className="text-sm font-bold text-[var(--color-accent)]">
               <SlotText
