@@ -56,7 +56,7 @@ export default function LiveFeedTab() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Live feed</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Real-time transactions and fraud alerts from Redis → WebSocket.
+            Real-time transactions and fraud alerts.
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-full bg-[var(--color-surface-raised)] px-3 py-1.5 text-xs font-medium border border-[var(--color-border)]">
