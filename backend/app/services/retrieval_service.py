@@ -11,8 +11,10 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.amount_hold import AmountHold
 from app.models.fraud_alert import FraudAlert
 from app.models.reconciliation_report import ReconciliationReport
+from app.models.risk_prediction import RiskPrediction
 from app.models.transaction import Transaction
 from app.models.user import User
 
@@ -35,13 +37,29 @@ def _serialize_transaction(tx: Transaction) -> dict:
     }
 
 
-def _serialize_alert(alert: FraudAlert) -> dict:
+def _serialize_alert(db: Session, alert: FraudAlert) -> dict:
+    hold = db.execute(
+        select(AmountHold)
+        .where(AmountHold.alert_id == alert.id)
+        .order_by(AmountHold.created_at.desc())
+    ).scalars().first()
     return {
         "risk_score": alert.risk_score,
         "status": alert.status.value,
         "triggered_rules": alert.triggered_rules,
         "created_at": alert.created_at.isoformat(),
         "transaction_id": alert.transaction.transaction_id,
+        "tier": alert.tier,
+        "pattern": alert.pattern,
+        "subject_role": alert.subject_role,
+        "signals": alert.signals or [],
+        "context_checks": alert.context_checks or [],
+        "score_breakdown": alert.score_breakdown,
+        "narrative": alert.narrative,
+        "user_explanation": alert.user_explanation,
+        "hold": None
+        if hold is None
+        else {"amount": str(hold.amount), "status": hold.status.value},
     }
 
 
@@ -73,7 +91,7 @@ def build_context_for_transaction(db: Session, transaction: Transaction) -> dict
 
     return {
         "transaction": _serialize_transaction(transaction),
-        "fraud_alerts": [_serialize_alert(a) for a in alerts],
+        "fraud_alerts": [_serialize_alert(db, a) for a in alerts],
         "sender_recent_history": [_serialize_transaction(t) for t in recent_history],
         "reconciliation_reports": _recent_reconciliation_reports(db),
     }
@@ -109,12 +127,30 @@ def build_context_for_account(db: Session, account_number: str) -> dict:
         .all()
     )
 
+    forecast = db.execute(
+        select(RiskPrediction)
+        .where(RiskPrediction.user_id == user.id)
+        .order_by(RiskPrediction.created_at.desc())
+    ).scalars().first()
+
     return {
         "account_number": user.account_number,
         "full_name": user.full_name,
         "recent_history": [_serialize_transaction(t) for t in recent_history],
-        "recent_fraud_alerts": [_serialize_alert(a) for a in alerts],
+        "recent_fraud_alerts": [_serialize_alert(db, a) for a in alerts],
         "reconciliation_reports": _recent_reconciliation_reports(db),
+        "risk_forecast": None
+        if forecast is None
+        else {
+            "current_risk": forecast.current_risk,
+            "predicted_7d_risk": forecast.predicted_7d_risk,
+            "risk_change": forecast.risk_change,
+            "trend": forecast.trend,
+            "horizon_days": forecast.horizon_days,
+            "drivers": forecast.drivers or [],
+            "explanation": forecast.explanation,
+            "series": forecast.series or [],
+        },
     }
 
 
