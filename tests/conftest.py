@@ -29,6 +29,7 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ["ENVIRONMENT"] = "test"
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend"))
+sys.path.append(str(Path(__file__).resolve().parent))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -39,6 +40,7 @@ from app.main import app  # noqa: E402
 
 @pytest.fixture(scope="session", autouse=True)
 def _create_test_schema():
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
