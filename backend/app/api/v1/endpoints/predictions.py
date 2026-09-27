@@ -26,6 +26,14 @@ def _to_response(prediction: RiskPrediction) -> RiskPredictionResponse:
         alerts_prior_7d=prediction.alerts_prior_7d,
         avg_risk_score_last_7d=prediction.avg_risk_score_last_7d,
         created_at=prediction.created_at,
+        current_risk=prediction.current_risk,
+        predicted_7d_risk=prediction.predicted_7d_risk,
+        risk_change=prediction.risk_change,
+        trend=prediction.trend,
+        horizon_days=prediction.horizon_days,
+        series=prediction.series or [],
+        drivers=prediction.drivers or [],
+        explanation=prediction.explanation or "",
     )
 
 
