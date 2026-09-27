@@ -5,7 +5,7 @@ import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
 import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
-import type { PaginatedTransactions, RecipientResult, TransactionReceipt } from "../../lib/types";
+import type { AmountHoldNotice, PaginatedTransactions, RecipientResult, TransactionReceipt } from "../../lib/types";
 import { useAuth } from "../../lib/useAuth";
 import { recentPeopleFromHistory } from "../../lib/recentPeople";
 import { AccountNumber } from "../../components/ui/AccountNumber";
@@ -56,10 +56,19 @@ export default function SendMoneyPage() {
 
   const [receipt, setReceipt] = useState<TransactionReceipt | null>(null);
 
+  const [held, setHeld] = useState(0);
+
   useEffect(() => {
     api
       .get<PaginatedTransactions>("/transactions/history", { params: { limit: 30 } })
       .then((response) => setRecent(recentPeopleFromHistory(response.data.items, 8)));
+    api
+      .get<AmountHoldNotice[]>("/holds/me")
+      .then((response) => {
+        const total = response.data.reduce((sum, hold) => sum + Number(hold.amount), 0);
+        setHeld(total);
+      })
+      .catch(() => setHeld(0));
   }, []);
 
   const remaining = useMemo(() => {
@@ -114,9 +123,13 @@ export default function SendMoneyPage() {
       setError("Enter a valid amount greater than zero.");
       return;
     }
-    if (remaining !== null && remaining < 0) {
+    if (remaining !== null && remaining < held) {
       cue.error();
-      setError("Amount exceeds your available balance.");
+      setError(
+        held > 0
+          ? `${held.toFixed(2)} ST is on hold after a risk review, so only ${Math.max(0, (Number(user?.balance) || 0) - held).toFixed(2)} ST can be sent. You can still receive money.`
+          : "Amount exceeds your available balance.",
+      );
       return;
     }
     setStep("review");
