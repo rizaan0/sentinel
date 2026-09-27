@@ -24,7 +24,35 @@ export interface TriggeredRule {
   risk_weight: number;
 }
 
-export type AlertStatus = "open" | "investigating" | "resolved" | "false_positive";
+export type AlertStatus =
+  | "open"
+  | "investigating"
+  | "resolved"
+  | "false_positive"
+  | "confirmed_fraud";
+
+export interface RiskSignal {
+  rule_id: string;
+  rule_name: string;
+  family: string;
+  severity: string;
+  score_contribution: number;
+  explanation: string;
+  evidence?: Record<string, unknown>;
+}
+
+export interface ContextCheck {
+  check: string;
+  value: unknown;
+  threshold: unknown;
+  cleared: boolean;
+}
+
+export interface RuleStat {
+  rule_id: string;
+  alerts: number;
+  false_positives: number;
+}
 
 export interface FraudAlert {
   id: number;
@@ -36,6 +64,16 @@ export interface FraudAlert {
   triggered_rules: TriggeredRule[];
   status: AlertStatus;
   created_at: string;
+  subject_role?: string | null;
+  tier?: string | null;
+  pattern?: string | null;
+  signals?: RiskSignal[];
+  context_checks?: ContextCheck[];
+  score_breakdown?: Record<string, number> | null;
+  narrative?: string | null;
+  user_explanation?: string | null;
+  hold_amount?: string | null;
+  hold_status?: string | null;
 }
 
 export interface ReconciliationDiscrepancy {
@@ -48,6 +86,12 @@ export interface ReconciliationDiscrepancy {
 
 export type RiskLevel = "low" | "medium" | "high";
 
+export interface ForecastPoint {
+  offset: number;
+  score: number;
+  kind: "actual" | "predicted";
+}
+
 export interface RiskPrediction {
   id: number;
   user_id: number;
@@ -58,6 +102,14 @@ export interface RiskPrediction {
   alerts_prior_7d: number;
   avg_risk_score_last_7d: number;
   created_at: string;
+  current_risk: number;
+  predicted_7d_risk: number;
+  risk_change: number;
+  trend: "increasing" | "stable" | "decreasing";
+  horizon_days: number;
+  series: ForecastPoint[];
+  drivers: string[];
+  explanation: string;
 }
 
 export interface ReconciliationReport {
