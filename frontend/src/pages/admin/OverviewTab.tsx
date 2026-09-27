@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { humanizeLabel } from "../../lib/humanize";
 import type { PlatformStats } from "../../lib/adminTypes";
 
 export default function OverviewTab() {
@@ -24,7 +25,9 @@ export default function OverviewTab() {
     },
     {
       label: "Latest reconciliation",
-      value: stats.latest_reconciliation_status ?? "Never run",
+      value: stats.latest_reconciliation_status
+        ? humanizeLabel(stats.latest_reconciliation_status)
+        : "Never run",
     },
   ];
 
