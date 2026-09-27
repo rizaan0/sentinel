@@ -201,7 +201,7 @@ export default function SendMoneyPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   autoComplete="off"
-                  placeholder="e.g. Alex or 123456…"
+                  placeholder="e.g. Alex or 1234 5678…"
                 />
               </Field>
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto sm:min-w-40">

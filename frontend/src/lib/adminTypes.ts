@@ -131,6 +131,22 @@ export interface AssistantLogEntry {
   created_at: string;
 }
 
+export interface ScenarioInfo {
+  id: string;
+  title: string;
+  summary: string;
+}
+
+export interface ScenarioStatus {
+  state: string;
+  scenario_id: string | null;
+  title: string | null;
+  step: number;
+  total: number;
+  last_transaction_id: string | null;
+  detail: string | null;
+}
+
 export interface LiveFeedEvent {
   type: "transaction" | "fraud_alert";
   payload: Record<string, unknown>;

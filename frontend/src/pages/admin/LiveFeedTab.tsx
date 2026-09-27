@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { LiveFeedEvent } from "../../lib/adminTypes";
+import { formatAccountNumber } from "../../lib/formatAccountNumber";
 import { humanizeLabel } from "../../lib/humanize";
-import { adminLiveFeedUrl } from "../../lib/ws";
-import { useAuth } from "../../lib/useAuth";
-import { EmptyState } from "../../components/ui/EmptyState";
 
-const MAX_EVENTS = 50;
+function displayAccount(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 12 && value.replace(/[\s-]/g, "") === digits) return formatAccountNumber(digits);
+  return value;
+}
+import { EmptyState } from "../../components/ui/EmptyState";
 
 function formatFeedValue(value: unknown): string {
   if (value == null || value === "") return "—";
-  if (typeof value === "string") return humanizeLabel(value);
+  if (typeof value === "string") return displayAccount(humanizeLabel(value));
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return value.map(formatFeedValue).join(", ");
   if (typeof value === "object") {
@@ -24,45 +27,25 @@ function summarizePayload(type: LiveFeedEvent["type"], payload: Record<string, u
   if (type === "fraud_alert") {
     const account = String(payload.account_number ?? payload.user_account_number ?? "—");
     const score = payload.risk_score ?? payload.score ?? "—";
-    return `Account ${account} · risk ${score}`;
+    return `Account ${displayAccount(account)} · risk ${score}`;
   }
   const amount = payload.amount ?? "—";
-  const sender = String(payload.sender_name ?? payload.sender_account_number ?? "Sender");
-  const receiver = String(payload.receiver_name ?? payload.receiver_account_number ?? "Receiver");
+  const sender = displayAccount(String(payload.sender_name ?? payload.sender_account_number ?? "Sender"));
+  const receiver = displayAccount(String(payload.receiver_name ?? payload.receiver_account_number ?? "Receiver"));
   return `${sender} → ${receiver} · ${amount} ST`;
 }
 
 /**
  * Live transaction/fraud-alert feed via WebSocket.
  */
-export default function LiveFeedTab() {
-  const { token } = useAuth();
-  const [events, setEvents] = useState<LiveFeedEvent[]>([]);
-  const [connected, setConnected] = useState(false);
+export default function LiveFeedTab({
+  events,
+  connected,
+}: {
+  events: LiveFeedEvent[];
+  connected: boolean;
+}) {
   const [expanded, setExpanded] = useState<number | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-
-    const socket = new WebSocket(adminLiveFeedUrl(token));
-    socketRef.current = socket;
-
-    socket.onopen = () => setConnected(true);
-    socket.onclose = () => setConnected(false);
-    socket.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(event.data) as Omit<LiveFeedEvent, "receivedAt">;
-        setEvents((prev) =>
-          [{ ...parsed, receivedAt: new Date().toISOString() }, ...prev].slice(0, MAX_EVENTS),
-        );
-      } catch {
-        // ignore malformed messages
-      }
-    };
-
-    return () => socket.close();
-  }, [token]);
 
   return (
     <div className="space-y-4">
@@ -73,7 +56,10 @@ export default function LiveFeedTab() {
             Real-time transactions and fraud alerts.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-[var(--color-surface-raised)] px-3 py-1.5 text-xs font-medium border border-[var(--color-border)]">
+        <div
+          className="flex min-h-11 items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5 text-xs font-medium"
+          role="status"
+        >
           <span
             className={`h-2 w-2 rounded-full ${connected ? "bg-[var(--color-signal-500)]" : "bg-[var(--color-rose-500)]"}`}
           />
@@ -84,7 +70,7 @@ export default function LiveFeedTab() {
       {events.length === 0 && (
         <EmptyState
           title="Waiting for live activity"
-          description="Perform a transfer in the user app to see it appear here instantly."
+          description="Start a scenario, or send money in the user app. New transfers and alerts appear here."
           symbol="rectangle.stack"
         />
       )}
@@ -94,8 +80,9 @@ export default function LiveFeedTab() {
           <li key={`${event.receivedAt}-${index}`} className="surface-card overflow-hidden">
             <button
               type="button"
+              aria-expanded={expanded === index}
               onClick={() => setExpanded(expanded === index ? null : index)}
-              className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--color-ink-50)]"
+              className="flex min-h-11 w-full items-start justify-between gap-3 px-4 py-3 text-left transition-[background-color] duration-150 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-[var(--color-ink-50)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--color-accent)]"
             >
               <div>
                 <span

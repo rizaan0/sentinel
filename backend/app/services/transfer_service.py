@@ -75,9 +75,18 @@ def active_hold_total(db: Session, user_id: int) -> Decimal:
     return total
 
 
+def canonical_account_number(value: str) -> str:
+    """Stored account numbers are 12 digits. Display grouping is not part of the value."""
+    stripped = value.strip()
+    digits = "".join(ch for ch in stripped if ch.isdigit())
+    if digits and all(ch.isdigit() or ch in " -" for ch in stripped):
+        return digits
+    return stripped
+
+
 def search_recipient(db: Session, account_number: str, exclude_user_id: int) -> User | None:
     user = db.execute(
-        select(User).where(User.account_number == account_number)
+        select(User).where(User.account_number == canonical_account_number(account_number))
     ).scalar_one_or_none()
     if user is None or user.id == exclude_user_id or not user.is_active:
         return None
@@ -95,7 +104,7 @@ def search_recipients(
     Recipient discovery: exact account, account prefix, or case-insensitive
     name match. Never exposes email. Caps results for a clean picker UX.
     """
-    q = query.strip()
+    q = canonical_account_number(query)
     if not q:
         return []
 
@@ -142,7 +151,7 @@ def search_recipients(
 def execute_transfer(db: Session, sender: User, payload: TransferRequest) -> Transaction:
     # --- Transaction Validation: Recipient Exists ---
     receiver = db.execute(
-        select(User).where(User.account_number == payload.recipient_account_number)
+        select(User).where(User.account_number == canonical_account_number(payload.recipient_account_number))
     ).scalar_one_or_none()
     if receiver is None or not receiver.is_active:
         raise RecipientNotFoundError(

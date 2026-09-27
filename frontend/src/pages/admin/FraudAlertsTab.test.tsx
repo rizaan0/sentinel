@@ -45,7 +45,7 @@ describe("FraudAlertsTab (admin alert review)", () => {
     const user = userEvent.setup();
     render(<FraudAlertsTab />);
 
-    expect(await screen.findByText(/account 123456789012/i)).toBeInTheDocument();
+    expect(await screen.findByText("1234 5678 9012")).toBeInTheDocument();
     expect(screen.getByText("Rapid repeated transfers")).toBeInTheDocument();
     expect(screen.getByText(/risk 30/i)).toBeInTheDocument();
 

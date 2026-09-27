@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { cue } from "../../lib/cue";
 import { humanizeLabel } from "../../lib/humanize";
 import type { ForecastPoint, RiskPrediction } from "../../lib/adminTypes";
+import { AccountNumber } from "../../components/ui/AccountNumber";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 
@@ -101,19 +102,24 @@ function ForecastChart({ series }: { series: ForecastPoint[] }) {
   );
 }
 
-export default function PredictiveAnalyticsTab() {
+export default function PredictiveAnalyticsTab({ refreshKey = 0 }: { refreshKey?: number }) {
   const [predictions, setPredictions] = useState<RiskPrediction[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
 
   const load = () => {
-    api.get<RiskPrediction[]>("/predictions").then((response) => {
-      setPredictions(response.data);
-      setSelectedId((current) => current ?? response.data[0]?.id ?? null);
-    });
+    setLoadError(null);
+    api
+      .get<RiskPrediction[]>("/predictions")
+      .then((response) => {
+        setPredictions(response.data);
+        setSelectedId((current) => current ?? response.data[0]?.id ?? null);
+      })
+      .catch(() => setLoadError("Unable to load risk forecasts."));
   };
 
-  useEffect(load, []);
+  useEffect(load, [refreshKey]);
 
   const runNow = async () => {
     setRunning(true);
@@ -150,7 +156,8 @@ export default function PredictiveAnalyticsTab() {
         </Button>
       </div>
 
-      {!predictions && <p className="text-sm text-[var(--color-text-muted)]">Loading forecasts…</p>}
+      {loadError && <p className="text-sm text-[var(--color-rose-600)]">{loadError}</p>}
+      {!loadError && !predictions && <p className="text-sm text-[var(--color-text-muted)]">Loading forecasts…</p>}
       {predictions && predictions.length === 0 && (
         <EmptyState
           title="No risk forecasts yet"
@@ -162,7 +169,7 @@ export default function PredictiveAnalyticsTab() {
       {predictions && predictions.length > 0 && selected && (
         <>
           <section className="surface-card overflow-x-auto p-4 sm:p-5">
-            <h2 className="text-sm font-semibold">Accounts at rising risk</h2>
+            <h2 className="text-sm font-semibold">Account forecasts</h2>
             <table className="mt-3 w-full min-w-[36rem] text-left text-sm">
               <thead className="text-xs text-[var(--color-text-muted)]">
                 <tr>
@@ -176,12 +183,22 @@ export default function PredictiveAnalyticsTab() {
                 {predictions.map((row) => (
                   <tr
                     key={row.id}
+                    tabIndex={0}
+                    aria-label={`Show forecast for account ${row.account_number}`}
                     onClick={() => setSelectedId(row.id)}
-                    className={`cursor-pointer border-t border-[var(--color-border)] ${
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedId(row.id);
+                      }
+                    }}
+                    className={`cursor-pointer border-t border-[var(--color-border)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--color-accent)] ${
                       row.id === selected.id ? "bg-[var(--color-ink-50)]" : ""
                     }`}
                   >
-                    <td className="py-3 font-mono">{row.account_number}</td>
+                    <td className="py-3">
+                      <AccountNumber number={row.account_number} copyable={false} />
+                    </td>
                     <td className="py-3 tabular">{row.current_risk}</td>
                     <td className="py-3 tabular">{row.predicted_7d_risk}</td>
                     <td className={`py-3 font-medium ${LEVEL_STYLE[row.predicted_risk_level]}`}>
@@ -195,7 +212,9 @@ export default function PredictiveAnalyticsTab() {
 
           <section className="surface-card p-4 sm:p-5">
             <h2 className="text-sm font-semibold">Risk forecast</h2>
-            <p className="mt-1 font-mono text-sm">{selected.account_number}</p>
+            <div className="mt-1">
+              <AccountNumber number={selected.account_number} copyable={false} />
+            </div>
             <div className="mt-4">
               <ForecastChart series={selected.series} />
             </div>

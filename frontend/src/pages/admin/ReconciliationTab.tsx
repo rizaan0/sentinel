@@ -68,17 +68,20 @@ function DiscrepancyRow({ row }: { row: ReconciliationDiscrepancy }) {
   );
 }
 
-export default function ReconciliationTab() {
+export default function ReconciliationTab({ refreshKey = 0 }: { refreshKey?: number }) {
   const [reports, setReports] = useState<ReconciliationReport[] | null>(null);
   const [running, setRunning] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = () => {
+    setLoadError(null);
     api
       .get<ReconciliationReport[]>("/reconciliation/reports")
-      .then((response) => setReports(response.data));
+      .then((response) => setReports(response.data))
+      .catch(() => setLoadError("Unable to load reconciliation checks."));
   };
 
-  useEffect(load, []);
+  useEffect(load, [refreshKey]);
 
   const runNow = async () => {
     setRunning(true);
@@ -117,23 +120,8 @@ export default function ReconciliationTab() {
         </Button>
       </div>
 
-      <ol className="grid gap-3 sm:grid-cols-3">
-        {[
-          ["1", "Sum the ledger", "Credits minus debits for each account. That sum is the expected balance."],
-          ["2", "Read the wallet", "The stored wallet balance is the actual balance."],
-          ["3", "Compare", "A difference means those two records disagree and should be investigated."],
-        ].map(([step, title, body]) => (
-          <li key={step} className="surface-card p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Step {step}
-            </p>
-            <p className="mt-1 text-sm font-semibold">{title}</p>
-            <p className="mt-1 text-sm text-pretty text-[var(--color-text-muted)]">{body}</p>
-          </li>
-        ))}
-      </ol>
-
-      {!reports && <p className="text-sm text-[var(--color-text-muted)]">Loading the latest check…</p>}
+      {loadError && <p className="text-sm text-[var(--color-rose-600)]">{loadError}</p>}
+      {!loadError && !reports && <p className="text-sm text-[var(--color-text-muted)]">Loading the latest check…</p>}
       {reports && !latest && (
         <EmptyState
           title="No reconciliation check yet"

@@ -3,12 +3,21 @@ import { api } from "../../lib/api";
 import { humanizeLabel } from "../../lib/humanize";
 import type { PlatformStats } from "../../lib/adminTypes";
 
-export default function OverviewTab() {
+export default function OverviewTab({ refreshKey = 0 }: { refreshKey?: number }) {
   const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<PlatformStats>("/admin/stats").then((response) => setStats(response.data));
-  }, []);
+    setLoadError(null);
+    api
+      .get<PlatformStats>("/admin/stats")
+      .then((response) => setStats(response.data))
+      .catch(() => setLoadError("Unable to load platform stats."));
+  }, [refreshKey]);
+
+  if (loadError) {
+    return <p className="text-sm text-[var(--color-rose-600)]">{loadError}</p>;
+  }
 
   if (!stats) {
     return <p className="text-sm text-[var(--color-text-muted)]">Loading platform stats…</p>;
@@ -36,7 +45,7 @@ export default function OverviewTab() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Platform overview</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Live snapshot of Sentinel payment and monitoring health.
+          Counts from the database. They update when a transfer or alert arrives.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">

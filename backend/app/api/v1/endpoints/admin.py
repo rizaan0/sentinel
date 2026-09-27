@@ -2,7 +2,7 @@
 Admin-only aggregation endpoints backing the Admin Dashboard overview and
 the platform-wide (not per-user) transaction feed.
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,21 @@ from app.models.fraud_alert import FraudAlert
 from app.models.reconciliation_report import ReconciliationReport
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.admin import PaginatedPlatformTransactions, PlatformStats, PlatformTransaction
+from app.schemas.admin import (
+    PaginatedPlatformTransactions,
+    PlatformStats,
+    PlatformTransaction,
+    ScenarioInfo,
+    ScenarioStatusResponse,
+)
+from app.services.scenarios.runner import (
+    ScenarioBusyError,
+    UnknownScenarioError,
+    current_status,
+    list_scenarios,
+    start_scenario,
+    stop_scenario,
+)
 
 router = APIRouter()
 
@@ -84,3 +98,45 @@ def list_all_transactions(
         for tx in rows
     ]
     return PaginatedPlatformTransactions(items=items, total=total, limit=limit, offset=offset)
+
+
+def _status_response() -> ScenarioStatusResponse:
+    current = current_status()
+    return ScenarioStatusResponse(
+        state=current.state,
+        scenario_id=current.scenario_id,
+        title=current.title,
+        step=current.step,
+        total=current.total,
+        last_transaction_id=current.last_transaction_id,
+        detail=current.detail,
+    )
+
+
+@router.get("/scenarios", response_model=list[ScenarioInfo])
+def get_scenarios(_admin: User = Depends(require_admin)) -> list[ScenarioInfo]:
+    return [ScenarioInfo(**item) for item in list_scenarios()]
+
+
+@router.get("/scenarios/status", response_model=ScenarioStatusResponse)
+def get_scenario_status(_admin: User = Depends(require_admin)) -> ScenarioStatusResponse:
+    return _status_response()
+
+
+@router.post("/scenarios/stop", response_model=ScenarioStatusResponse)
+def post_scenario_stop(_admin: User = Depends(require_admin)) -> ScenarioStatusResponse:
+    stop_scenario()
+    return _status_response()
+
+
+@router.post("/scenarios/{scenario_id}/start", response_model=ScenarioStatusResponse)
+def post_scenario_start(
+    scenario_id: str, _admin: User = Depends(require_admin)
+) -> ScenarioStatusResponse:
+    try:
+        start_scenario(scenario_id)
+    except UnknownScenarioError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown scenario")
+    except ScenarioBusyError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    return _status_response()

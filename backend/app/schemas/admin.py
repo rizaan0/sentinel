@@ -25,6 +25,22 @@ class PlatformTransaction(BaseModel):
     created_at: datetime
 
 
+class ScenarioInfo(BaseModel):
+    id: str
+    title: str
+    summary: str
+
+
+class ScenarioStatusResponse(BaseModel):
+    state: str
+    scenario_id: str | None
+    title: str | None
+    step: int
+    total: int
+    last_transaction_id: str | None
+    detail: str | None
+
+
 class PaginatedPlatformTransactions(BaseModel):
     items: list[PlatformTransaction]
     total: int

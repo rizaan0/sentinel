@@ -25,6 +25,16 @@ def test_search_finds_recipient_by_account_number(client):
     )
     assert response.status_code == 200
     assert response.json()["account_number"] == bob["account_number"]
+    grouped = " ".join(
+        bob["account_number"][index : index + 4] for index in range(0, 12, 4)
+    )
+    by_display = client.get(
+        "/api/v1/transactions/search",
+        params={"q": grouped},
+        headers=alice_headers,
+    )
+    assert by_display.status_code == 200
+    assert any(item["account_number"] == bob["account_number"] for item in by_display.json())
 
 
 def test_search_does_not_return_self(client):

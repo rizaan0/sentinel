@@ -19,6 +19,13 @@ from app.services.risk.rules import RULES
 
 router = APIRouter()
 
+ALERT_TIERS = {"suspicious", "high", "critical"}
+
+
+def _rule_label(stored: str) -> str:
+    spec = RULES.get(stored)
+    return spec.name if spec is not None else stored
+
 
 def _hold_for(alert: FraudAlert) -> AmountHold | None:
     holds = [hold for hold in getattr(alert, "holds", [])]
@@ -38,13 +45,19 @@ def _to_response(alert: FraudAlert, db: Session) -> FraudAlertResponse:
         account_number=alert.user.account_number,
         transaction_public_id=alert.transaction.transaction_id,
         risk_score=alert.risk_score,
-        triggered_rules=alert.triggered_rules or [],
+        triggered_rules=[
+            {**rule, "rule_name": _rule_label(rule.get("rule_name", ""))}
+            for rule in (alert.triggered_rules or [])
+        ],
         status=alert.status,
         created_at=alert.created_at,
         subject_role=alert.subject_role,
         tier=alert.tier,
         pattern=alert.pattern,
-        signals=alert.signals or [],
+        signals=[
+            {**signal, "rule_name": _rule_label(signal.get("rule_id") or signal.get("rule_name", ""))}
+            for signal in (alert.signals or [])
+        ],
         context_checks=alert.context_checks or [],
         score_breakdown=alert.score_breakdown,
         narrative=alert.narrative,
@@ -72,7 +85,11 @@ def list_alerts(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[FraudAlertResponse]:
-    query = select(FraudAlert).order_by(FraudAlert.created_at.desc())
+    query = (
+        select(FraudAlert)
+        .where(FraudAlert.tier.in_(ALERT_TIERS))
+        .order_by(FraudAlert.created_at.desc())
+    )
     if status_filter is not None:
         query = query.where(FraudAlert.status == status_filter)
     alerts = db.execute(query.limit(limit).offset(offset)).scalars().all()

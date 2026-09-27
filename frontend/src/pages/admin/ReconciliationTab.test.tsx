@@ -44,7 +44,6 @@ describe("ReconciliationTab", () => {
     render(<ReconciliationTab />);
 
     expect(await screen.findByRole("heading", { name: "Current check" })).toBeInTheDocument();
-    expect(screen.getByText("Sum the ledger")).toBeInTheDocument();
     expect(screen.getAllByText(/wallet is 120.50 ST higher than the ledger/i)).toHaveLength(1);
     expect(screen.getByText("Expected · ledger")).toBeInTheDocument();
     expect(screen.getByText("Actual · wallet")).toBeInTheDocument();

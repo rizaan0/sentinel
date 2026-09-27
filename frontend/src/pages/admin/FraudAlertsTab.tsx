@@ -5,7 +5,9 @@ import type { AlertStatus, FraudAlert, RuleStat } from "../../lib/adminTypes";
 import AssistantPanel from "./AssistantPanel";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Modal } from "../../components/ui/Modal";
+import { AccountNumber } from "../../components/ui/AccountNumber";
 import { TransactionId } from "../../components/ui/TransactionId";
+import { formatAccountNumber } from "../../lib/formatAccountNumber";
 
 const STATUS_OPTIONS: AlertStatus[] = [
   "open",
@@ -24,7 +26,7 @@ function riskTone(score: number): string {
 /**
  * Fraud alerts with investigation drawer for the AI assistant.
  */
-export default function FraudAlertsTab() {
+export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number }) {
   const [alerts, setAlerts] = useState<FraudAlert[] | null>(null);
   const [stats, setStats] = useState<RuleStat[]>([]);
   const [active, setActive] = useState<FraudAlert | null>(null);
@@ -44,7 +46,7 @@ export default function FraudAlertsTab() {
     });
   };
 
-  useEffect(load, []);
+  useEffect(load, [refreshKey]);
 
   const updateStatus = async (alertId: number, status: AlertStatus) => {
     const response = await api.patch<FraudAlert>(`/fraud-alerts/${alertId}/status`, { status });
@@ -89,7 +91,7 @@ export default function FraudAlertsTab() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="font-medium">
-                  Account {alert.account_number}{" "}
+                  <AccountNumber number={alert.account_number} copyable={false} />{" "}
                   <span className={`tabular ${riskTone(alert.risk_score)}`}>
                     · risk {alert.risk_score}
                   </span>
@@ -126,7 +128,7 @@ export default function FraudAlertsTab() {
                   id={`status-${alert.id}`}
                   value={alert.status}
                   onChange={(e) => updateStatus(alert.id, e.target.value as AlertStatus)}
-                  className="input !w-auto !py-2 text-sm"
+                  className="input !w-auto min-h-11 py-2 text-sm"
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -149,7 +151,7 @@ export default function FraudAlertsTab() {
 
       <Modal
         open={Boolean(active)}
-        title={active ? `Investigate ${active.account_number}` : "Investigate"}
+        title={active ? `Investigate ${formatAccountNumber(active.account_number)}` : "Investigate"}
         onClose={() => setActive(null)}
       >
         {active && (
