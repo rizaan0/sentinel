@@ -1,10 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import type { LiveFeedEvent } from "../../lib/adminTypes";
+import { humanizeLabel } from "../../lib/humanize";
 import { adminLiveFeedUrl } from "../../lib/ws";
 import { useAuth } from "../../lib/useAuth";
 import { EmptyState } from "../../components/ui/EmptyState";
 
 const MAX_EVENTS = 50;
+
+function formatFeedValue(value: unknown): string {
+  if (value == null || value === "") return "—";
+  if (typeof value === "string") return humanizeLabel(value);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(formatFeedValue).join(", ");
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `${humanizeLabel(key)}: ${formatFeedValue(item)}`)
+      .join("; ");
+  }
+  return String(value);
+}
 
 function summarizePayload(type: LiveFeedEvent["type"], payload: Record<string, unknown>): string {
   if (type === "fraud_alert") {
@@ -102,9 +116,14 @@ export default function LiveFeedTab() {
               </span>
             </button>
             {expanded === index && (
-              <pre className="border-t border-[var(--color-border)] bg-[var(--color-ink-50)] px-4 py-3 text-xs overflow-x-auto whitespace-pre-wrap text-[var(--color-ink-700)]">
-                {JSON.stringify(event.payload, null, 2)}
-              </pre>
+              <dl className="space-y-1 border-t border-[var(--color-border)] bg-[var(--color-ink-50)] px-4 py-3 text-xs text-[var(--color-ink-700)]">
+                {Object.entries(event.payload).map(([key, value]) => (
+                  <div key={key} className="grid grid-cols-[9rem_1fr] gap-3">
+                    <dt className="text-[var(--color-text-muted)]">{humanizeLabel(key)}</dt>
+                    <dd className="break-words">{formatFeedValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
           </li>
         ))}
