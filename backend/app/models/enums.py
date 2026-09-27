@@ -34,6 +34,14 @@ class AlertStatus(str, enum.Enum):
     INVESTIGATING = "investigating"
     RESOLVED = "resolved"
     FALSE_POSITIVE = "false_positive"
+    CONFIRMED_FRAUD = "confirmed_fraud"
+
+
+class HoldStatus(str, enum.Enum):
+    ACTIVE = "active"
+    RELEASED = "released"
+    EXPIRED = "expired"
+    CONFIRMED = "confirmed"
 
 
 class RiskLevel(str, enum.Enum):
