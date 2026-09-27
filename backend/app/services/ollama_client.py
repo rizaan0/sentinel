@@ -11,15 +11,15 @@ class OllamaUnavailableError(Exception):
     pass
 
 
-def chat(system_prompt: str, user_prompt: str) -> str:
+def chat(system_prompt: str, user_prompt: str, history: list[dict] | None = None) -> str:
     """Calls Ollama's /api/chat (non-streaming) and returns the assistant's reply text."""
     url = f"{settings.OLLAMA_BASE_URL}/api/chat"
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history or [])
+    messages.append({"role": "user", "content": user_prompt})
     payload = {
         "model": settings.OLLAMA_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        "messages": messages,
         "stream": False,
     }
     try:
