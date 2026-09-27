@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SlotText } from "slot-text/react";
 import { api } from "../../lib/api";
-import type { PaginatedTransactions } from "../../lib/types";
+import type { AmountHoldNotice, PaginatedTransactions } from "../../lib/types";
 import { useAuth } from "../../lib/useAuth";
 import { formatWhen, recentPeopleFromHistory } from "../../lib/recentPeople";
 import { AccountNumber } from "../../components/ui/AccountNumber";
@@ -18,13 +18,28 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [history, setHistory] = useState<PaginatedTransactions | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [holds, setHolds] = useState<AmountHoldNotice[]>([]);
+  const [explanation, setExplanation] = useState("");
 
   useEffect(() => {
     api
       .get<PaginatedTransactions>("/transactions/history", { params: { limit: 20 } })
       .then((response) => setHistory(response.data))
       .finally(() => setLoadingHistory(false));
+    api
+      .get<AmountHoldNotice[]>("/holds/me")
+      .then((response) => setHolds(response.data))
+      .catch(() => setHolds([]));
   }, []);
+
+  const submitExplanation = async (holdId: number) => {
+    const text = explanation.trim();
+    if (!text) return;
+    await api.post(`/holds/${holdId}/explanation`, { text });
+    setExplanation("");
+    const response = await api.get<AmountHoldNotice[]>("/holds/me");
+    setHolds(response.data);
+  };
 
   const recentPeople = useMemo(
     () => recentPeopleFromHistory(history?.items ?? [], 8),
@@ -43,6 +58,39 @@ export default function DashboardPage() {
             : "Your balance and recent transfers."
         }
       />
+
+      {holds.map((hold) => (
+        <section key={hold.id} className="surface-card space-y-3 p-5">
+          <h2 className="text-sm font-semibold">Amount on hold</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {hold.amount} ST is held against your available balance. You can still receive money.
+            Respond by {new Date(hold.explanation_due_at).toLocaleDateString()}.
+          </p>
+          {hold.narrative && <p className="text-sm text-pretty">{hold.narrative}</p>}
+          {hold.user_explanation ? (
+            <p className="text-sm">Your note: {hold.user_explanation}</p>
+          ) : (
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitExplanation(hold.id);
+              }}
+            >
+              <label className="text-sm font-medium" htmlFor={`hold-note-${hold.id}`}>
+                Explain this activity
+              </label>
+              <textarea
+                id={`hold-note-${hold.id}`}
+                className="input min-h-24"
+                value={explanation}
+                onChange={(event) => setExplanation(event.target.value)}
+              />
+              <Button type="submit">Send explanation</Button>
+            </form>
+          )}
+        </section>
+      ))}
 
       <div className="grid flex-1 gap-5 lg:grid-cols-12 lg:items-stretch lg:gap-6">
         <section className="surface-card flex flex-col shadow-[var(--shadow-md)] lg:col-span-5">
