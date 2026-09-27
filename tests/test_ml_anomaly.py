@@ -57,7 +57,7 @@ class _FakeAlwaysAnomalous:
 
 
 def test_monitoring_engine_creates_ml_alert_when_model_flags_anomaly(
-    client, admin_headers, monkeypatch
+    client, admin_headers, monkeypatch, db_session
 ):
     fake_artifact = {"model": _FakeAlwaysAnomalous(), "feature_columns": ml_features.FEATURE_COLUMNS}
     monkeypatch.setattr(ml_anomaly_service, "_load_artifact", lambda: fake_artifact)
@@ -72,8 +72,18 @@ def test_monitoring_engine_creates_ml_alert_when_model_flags_anomaly(
     )
     tx_id = response.json()["transaction_id"]
 
+    from sqlalchemy import select
+
+    from app.models.risk_evaluation import RiskEvaluation
+    from app.models.transaction import Transaction
+
     alerts = client.get("/api/v1/fraud-alerts", headers=admin_headers).json()
     matching = [a for a in alerts if a["transaction_public_id"] == tx_id]
-    assert len(matching) == 1
-    rule_names = {r["rule_name"] for r in matching[0]["triggered_rules"]}
-    assert "ml_anomaly_detected" in rule_names
+    assert matching == []
+    tx = db_session.execute(select(Transaction).where(Transaction.transaction_id == tx_id)).scalar_one()
+    db_session.expire_all()
+    record = db_session.execute(
+        select(RiskEvaluation).where(RiskEvaluation.transaction_id == tx.id)
+    ).scalars().one()
+    assert any(signal["rule_id"] == "ML" for signal in record.signals)
+    assert record.hold_placed is False
