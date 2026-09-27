@@ -16,6 +16,7 @@ from app.schemas.transaction import (
 from app.schemas.user import UserSearchResult
 from app.services.pin_service import InvalidPinError, PinLockedError, PinNotSetError
 from app.services.transfer_service import (
+    FundsOnHoldError,
     InsufficientBalanceError,
     RecipientNotFoundError,
     SelfTransferError,
@@ -95,6 +96,10 @@ def transfer(
     except (PinNotSetError, InvalidPinError, PinLockedError) as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     except InsufficientBalanceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    except FundsOnHoldError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
