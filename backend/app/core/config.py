@@ -51,18 +51,67 @@ class Settings(BaseSettings):
     PREDICTION_INTERVAL_MINUTES: int = 30
 
     # --- Rule-based fraud detection (Monitoring Engine) ---
-    RAPID_REPEAT_WINDOW_SECONDS: int = 60
-    RAPID_REPEAT_MIN_COUNT: int = 3
+    RULES_VERSION: str = "1"
 
-    CIRCULAR_FLOW_WINDOW_MINUTES: int = 15
-    CIRCULAR_FLOW_MAX_HOPS: int = 4
+    R01_WINDOW_SECONDS: int = 60
+    R01_MIN_COUNT: int = 3
 
-    LARGE_TRANSFER_STDDEV_MULTIPLIER: float = 3.0
-    LARGE_TRANSFER_MIN_HISTORY: int = 3
+    R02_WINDOW_MINUTES: int = 10
+    R02_FALLBACK_COUNT: int = 10
+    R02_BASELINE_MULTIPLIER: float = 3.0
 
-    BURST_WINDOW_MINUTES: int = 5
-    BURST_MIN_COUNT: int = 5
-    BURST_MAX_AMOUNT: float = 100.0
+    R03_WINDOW_MINUTES: int = 2
+    R03_FALLBACK_SENDERS: int = 5
+    R03_AMOUNT_SIMILARITY: float = 0.98
+    R03_NEW_SENDER_SHARE: float = 0.6
+
+    R04_WINDOW_MINUTES: int = 10
+    R04_FALLBACK_RECIPIENTS: int = 5
+
+    R05_MIN_HISTORY: int = 5
+    R05_ROBUST_Z: float = 5.0
+    R05_MEDIAN_MULTIPLIER: float = 3.0
+
+    R06_WINDOW_MINUTES: int = 5
+    R06_MIN_COUNT: int = 8
+    R06_MAX_AMOUNT: float = 100.0
+    R06_DAILY_MULTIPLIER: float = 3.0
+
+    R07_DORMANT_DAYS: int = 30
+    R07_MIN_COUNT: int = 3
+    R07_MEDIAN_MULTIPLIER: float = 5.0
+
+    R08_WINDOW_MINUTES: int = 30
+    R08_FORWARD_RATIO: float = 0.8
+    R08_RETAINED_RATIO: float = 0.1
+
+    R09_WINDOW_MINUTES: int = 15
+    R09_MAX_HOPS: int = 4
+
+    R10_WINDOW_MINUTES: int = 30
+    R10_MIN_HOPS: int = 3
+    R10_FORWARD_RATIO: float = 0.8
+
+    R11_WINDOW_MINUTES: int = 10
+    R11_FALLBACK_COUNT: int = 5
+
+    R12_WINDOW_HOURS: int = 24
+    R12_CONCENTRATION: float = 0.7
+    R12_MIN_COUNT: int = 4
+
+    BASELINE_DAYS: int = 30
+    BASELINE_MIN_HISTORY: int = 5
+    NEW_ACCOUNT_DAYS: int = 7
+    MATURE_ACCOUNT_DAYS: int = 30
+    CONTEXT_REDUCTION: int = 10
+    CONTEXT_REDUCTION_CAP: int = 30
+    FAMILY_BONUS_TWO: int = 10
+    FAMILY_BONUS_THREE: int = 20
+    FALSE_POSITIVE_LOOKBACK_DAYS: int = 90
+    ALERT_DEDUP_MINUTES: int = 30
+    HOLD_MAX_DAYS: int = 60
+    HOLD_EXPLANATION_DAYS: int = 20
+    ML_SIGNAL_CAP: int = 15
 
 
 @lru_cache
