@@ -7,13 +7,15 @@ Validation (recipient exists, PIN verification, wallet balance) before any
 balance is touched, and produces the Transaction record used for receipts
 and, from Phase 3 onward, ledger entries.
 """
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.events import TRANSACTION_COMPLETED, TransactionCompletedEvent, event_bus
-from app.models.enums import TransactionStatus
+from app.models.amount_hold import AmountHold
+from app.models.enums import HoldStatus, TransactionStatus
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.models.wallet import Wallet
@@ -38,6 +40,39 @@ class SelfTransferError(Exception):
 
 class InsufficientBalanceError(Exception):
     pass
+
+
+class FundsOnHoldError(Exception):
+    pass
+
+
+def active_hold_total(db: Session, user_id: int) -> Decimal:
+    """Sum of active holds. Expired holds are closed the first time they are read."""
+    now = datetime.now(UTC)
+    holds = (
+        db.execute(
+            select(AmountHold).where(
+                AmountHold.user_id == user_id,
+                AmountHold.status == HoldStatus.ACTIVE,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    total = Decimal("0")
+    changed = False
+    for hold in holds:
+        expires = hold.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=UTC)
+        if expires <= now:
+            hold.status = HoldStatus.EXPIRED
+            changed = True
+            continue
+        total += Decimal(hold.amount)
+    if changed:
+        db.flush()
+    return total
 
 
 def search_recipient(db: Session, account_number: str, exclude_user_id: int) -> User | None:
@@ -139,6 +174,13 @@ def execute_transfer(db: Session, sender: User, payload: TransferRequest) -> Tra
     receiver_wallet = wallets_by_user[receiver.id]
 
     amount: Decimal = payload.amount
+    held = active_hold_total(db, sender.id)
+    available = sender_wallet.balance - held
+    if held > 0 and amount > available:
+        raise FundsOnHoldError(
+            f"{held} ST is on hold after a risk review, so only {available} ST can be sent. "
+            "You can still receive money. Open Home for the reason and how to respond."
+        )
     if sender_wallet.balance < amount:
         raise InsufficientBalanceError("Insufficient balance for this transfer")
 
