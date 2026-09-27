@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
+import { humanizeLabel } from "../../lib/humanize";
 import type { TransactionReceipt } from "../../lib/types";
 import { extractErrorMessage } from "../../lib/errors";
 import { formatWhen } from "../../lib/recentPeople";
@@ -84,7 +85,7 @@ export default function ReceiptPage() {
             <TransactionId id={receipt.transaction_id} />
           </dd>
         </div>
-        <Row label="Status" value={receipt.status.replace("_", " ")} />
+        <Row label="Status" value={humanizeLabel(receipt.status)} />
         {receipt.remark && <Row label="Remark" value={receipt.remark} />}
         <Row label="Balance after" value={`${receipt.balance_after} ST`} />
       </dl>
