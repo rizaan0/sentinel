@@ -28,6 +28,17 @@ export interface TransactionSummary {
   direction: "sent" | "received";
 }
 
+export interface AmountHoldNotice {
+  id: number;
+  amount: string;
+  status: string;
+  reason_codes: string[];
+  expires_at: string;
+  explanation_due_at: string;
+  narrative: string | null;
+  user_explanation: string | null;
+}
+
 export interface PaginatedTransactions {
   items: TransactionSummary[];
   total: number;
