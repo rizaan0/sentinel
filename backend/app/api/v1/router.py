@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     auth,
     fraud_alerts,
     health,
+    holds,
     pin,
     predictions,
     reconciliation,
@@ -24,6 +25,7 @@ api_router.include_router(
     reconciliation.router, prefix="/reconciliation", tags=["reconciliation"]
 )
 api_router.include_router(fraud_alerts.router, prefix="/fraud-alerts", tags=["fraud-alerts"])
+api_router.include_router(holds.router, prefix="/holds", tags=["holds"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(predictions.router, prefix="/predictions", tags=["predictions"])
 api_router.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
