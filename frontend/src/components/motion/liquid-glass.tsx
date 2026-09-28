@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { SfIcon } from "@/components/ui/icons";
-import { LANDING_CHROME } from "@/pages/marketing/landingRail";
+import { LANDING_FRAME, LANDING_PAD } from "@/pages/marketing/landingRail";
 
 interface GlassEffectProps {
   children: ReactNode;
@@ -79,9 +79,9 @@ export function GlassEffect({
  */
 export function LiquidNavbarDemo() {
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-4 z-50 sm:top-5">
+    <header className={`pointer-events-none fixed inset-x-0 top-4 z-50 sm:top-5 ${LANDING_PAD}`}>
       <GlassFilter />
-      <div className={LANDING_CHROME}>
+      <div className={LANDING_FRAME}>
         <GlassEffect className="pointer-events-auto w-full rounded-3xl p-3 hover:rounded-4xl hover:p-4">
           <nav className="flex h-14 w-full items-center justify-between sm:h-16">
           <BrandMark size="sm" />
