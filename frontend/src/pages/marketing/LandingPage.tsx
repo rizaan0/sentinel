@@ -1,11 +1,13 @@
 import { Helmet } from "react-helmet-async";
+import { GrainPastelBackground } from "@/components/motion/grain-pastel-background";
 import Navbar from "./sections/Navbar";
 import HeroSection from "./sections/HeroSection";
 import Footer from "./sections/Footer";
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-dvh flex-col bg-white text-[var(--color-text)]">
+    <div className="relative flex min-h-dvh flex-col bg-white text-[var(--color-text)]">
+      <GrainPastelBackground />
       <Helmet>
         <title>Sentinel — Real-Time Transaction Monitoring</title>
         <meta

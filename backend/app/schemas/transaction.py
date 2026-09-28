@@ -12,6 +12,13 @@ class TransferRequest(BaseModel):
     amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
     remark: str | None = Field(default=None, max_length=280)
     pin: str = Field(min_length=4, max_length=6)
+    idempotency_key: str | None = Field(default=None, max_length=64)
+
+
+class StepUpConfirm(BaseModel):
+    challenge_id: str
+    code: str = Field(min_length=6, max_length=6)
+    idempotency_key: str = Field(min_length=1, max_length=64)
 
 
 class TransactionReceipt(BaseModel):

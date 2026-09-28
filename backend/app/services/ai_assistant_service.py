@@ -183,6 +183,15 @@ def _answer_without_model(question: str, context: dict, recorded: str | None) ->
     alerts = context.get("fraud_alerts") or context.get("recent_fraud_alerts") or []
     alert = alerts[0] if alerts else None
     asked = question.lower()
+    if alert and any(word in asked for word in ("what would change", "would it have been allowed", "counterfactual")):
+        trace = alert.get("decision_trace") or {}
+        smallest = trace.get("smallest_allow") or {}
+        text = smallest.get("text")
+        if text:
+            return text
+        lines = [item.get("text") for item in trace.get("counterfactuals") or [] if item.get("text")]
+        if lines:
+            return " ".join(lines)
     if alert and any(word in asked for word in ("block", "freeze", "hold", "restrict", "close", "keep it open", "keep open")):
         score = alert.get("risk_score")
         tier = (alert.get("tier") or "recorded").replace("_", " ")

@@ -6,14 +6,27 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from itertools import combinations
+
+from app.models.case_event import CaseEvent
 from app.models.enums import AlertStatus
 from app.models.fraud_alert import FraudAlert
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.services import ml_anomaly_service
 from app.services.risk.baselines import AccountActivity, load_activity, load_window
-from app.services.risk.decision import match_pattern, score, should_hold, tier_for
-from app.services.risk.decision import apply_family_dedup
+from app.services.risk.decision import (
+    ACTION_ALLOW,
+    ACTION_HOLD,
+    ACTION_MONITOR,
+    ACTION_STEP_UP,
+    apply_family_dedup,
+    match_pattern,
+    score,
+    select_action,
+    should_hold,
+    tier_for,
+)
 from app.services.risk.explain import narrate
 from app.services.risk.rules import RULES_VERSION
 from app.services.risk import signals as rule_signals
@@ -28,6 +41,7 @@ def _context_checks(
     focus: AccountActivity,
     inbound_senders: list[User],
     fired_ids: set[str],
+    signature: dict | None = None,
 ) -> list[dict]:
     since = focus.now - timedelta(minutes=settings.R08_WINDOW_MINUTES)
     inbound = focus.inbound(since)
@@ -87,18 +101,8 @@ def _context_checks(
         .scalars()
         .first()
     )
-    prior_fp = (
-        db.execute(
-            select(FraudAlert.id).where(
-                FraudAlert.user_id == focus.user.id,
-                FraudAlert.status == AlertStatus.FALSE_POSITIVE,
-                FraudAlert.created_at >= focus.now - timedelta(days=settings.FALSE_POSITIVE_LOOKBACK_DAYS),
-            )
-        )
-        .scalars()
-        .first()
-    )
     inbound_cleared = focus.thin_history or "R03" not in fired_ids
+    reviewed = _reviewed_pattern(db, focus, signature)
 
     return [
         _check("onward_transfer_ratio", round(ratio, 4), 0.5, onward_cleared),
@@ -107,7 +111,13 @@ def _context_checks(
         _check("sender_risk", len(young) + len(list(risky_alerts)), 0, sender_cleared),
         _check("activity_abnormality", today_count, settings.R02_FALLBACK_COUNT, activity_cleared),
         _check("account_maturity", round(age_days, 1), settings.MATURE_ACCOUNT_DAYS, age_days >= settings.MATURE_ACCOUNT_DAYS and not confirmed),
-        _check("prior_false_positive", bool(prior_fp), True, bool(prior_fp)),
+        {
+            "check": "reviewed_legitimate_pattern",
+            "value": reviewed["matched"],
+            "threshold": True,
+            "cleared": reviewed["matched"],
+            "detail": reviewed["detail"],
+        },
     ]
 
 
@@ -195,7 +205,10 @@ def evaluate(db: Session, transaction: Transaction) -> dict | None:
         inbound_users = list(
             db.execute(select(User).where(User.id.in_(inbound_ids))).scalars().all()
         )
-    checks = _context_checks(db, focus_activity, inbound_users, {s["rule_id"] for s in scored})
+    signature = _pattern_signature(scored, focus_activity)
+    checks = _context_checks(
+        db, focus_activity, inbound_users, {s["rule_id"] for s in scored}, signature
+    )
     pattern = match_pattern(scored, checks)
     breakdown = score(scored, checks, pattern)
     tier = tier_for(breakdown["final"], scored, pattern)
@@ -204,6 +217,9 @@ def evaluate(db: Session, transaction: Transaction) -> dict | None:
     if hold:
         bases = [signal.get("hold_basis") or 0 for signal in scored if signal["score_contribution"] > 0]
         hold_amount = max(bases) if any(bases) else float(transaction.amount)
+    action = select_action(tier, pattern, scored)
+    trace = _decision_trace(raw, scored, checks, breakdown["final"], action)
+    trace["signature"] = signature
     narrative = narrate(breakdown["final"], scored, checks, pattern, tier, hold)
     subject_role = "receiver" if focus_id == receiver.id else "sender"
     return {
@@ -219,4 +235,158 @@ def evaluate(db: Session, transaction: Transaction) -> dict | None:
         "narrative": narrative,
         "hold": hold,
         "hold_amount": hold_amount,
+        "action": action,
+        "decision_trace": trace,
+        "signature": signature,
+    }
+
+
+def _pattern_signature(signals: list[dict], focus: AccountActivity) -> dict:
+    fan_in = next((signal for signal in signals if signal["rule_id"] == "R03"), None)
+    sender_ids = []
+    if fan_in is not None:
+        sender_ids = list((fan_in.get("evidence") or {}).get("sender_ids") or [])
+    outbound = focus.outbound(focus.now - timedelta(minutes=settings.R08_WINDOW_MINUTES))
+    onward = outbound[-1].receiver_id if outbound else None
+    families = sorted({signal["family"] for signal in signals})
+    return {
+        "subject_user_id": focus.user.id,
+        "sender_ids": sender_ids,
+        "onward_recipient_id": onward,
+        "families": families,
+    }
+
+
+def _signatures_match(stored: dict, current: dict) -> bool:
+    stored_senders = set(stored.get("sender_ids") or [])
+    current_senders = set(current.get("sender_ids") or [])
+    if stored_senders or current_senders:
+        if not stored_senders or not current_senders:
+            return False
+        if len(stored_senders & current_senders) / len(stored_senders) < 0.6:
+            return False
+    if stored.get("onward_recipient_id") != current.get("onward_recipient_id"):
+        return False
+    return set(stored.get("families") or []) == set(current.get("families") or [])
+
+
+def _reviewed_pattern(db: Session, focus: AccountActivity, signature: dict | None) -> dict:
+    if (
+        db.execute(
+            select(FraudAlert.id).where(
+                FraudAlert.user_id == focus.user.id,
+                FraudAlert.status == AlertStatus.CONFIRMED_FRAUD,
+            )
+        )
+        .scalars()
+        .first()
+    ):
+        return {"matched": False, "detail": None}
+    since = focus.now - timedelta(days=settings.FALSE_POSITIVE_LOOKBACK_DAYS)
+    events = (
+        db.execute(
+            select(CaseEvent).where(
+                CaseEvent.kind == "review",
+                CaseEvent.created_at >= since,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    current = signature or {}
+    for event in events:
+        detail = event.detail or {}
+        if detail.get("subject_user_id") != focus.user.id:
+            continue
+        if not _signatures_match(detail, current):
+            continue
+        when = event.created_at.date().isoformat()
+        reason = str(detail.get("reason", "other")).replace("_", " ")
+        return {
+            "matched": True,
+            "detail": f"This pattern was reviewed as legitimate on {when}: {reason}.",
+        }
+    return {"matched": False, "detail": None}
+
+
+def _context_lines(signals: list[dict]) -> list[str]:
+    lines = []
+    for signal in signals:
+        if signal.get("score_contribution", 0) <= 0:
+            continue
+        evidence = signal.get("evidence") or {}
+        rule_id = signal["rule_id"]
+        if rule_id == "R03":
+            lines.append(
+                f"{evidence.get('sender_count', 'Several')} senders in {evidence.get('window_minutes', 2)} minutes"
+            )
+        elif rule_id == "R08":
+            ratio = evidence.get("forward_ratio")
+            percent = int(float(ratio) * 100) if ratio is not None else 90
+            lines.append(f"{percent}% forwarded within {evidence.get('window_minutes', 30)} minutes")
+        elif rule_id == "R11":
+            lines.append(
+                "Recipient had no prior history"
+                if evidence.get("new_counterparties")
+                else signal["rule_name"]
+            )
+        else:
+            lines.append(signal["rule_name"])
+    return lines
+
+
+def _action_phrase(action: str) -> str:
+    if action == ACTION_ALLOW:
+        return "the transfer is allowed"
+    if action == ACTION_MONITOR:
+        return "the transfer is allowed with monitoring"
+    if action == ACTION_STEP_UP:
+        return "the transfer asks for confirmation"
+    if action == ACTION_HOLD:
+        return "the transfer is held"
+    return action
+
+
+def _rescore(raw: list[dict], checks: list[dict], drop: set[str]) -> tuple[int, str]:
+    kept = [signal for signal in raw if signal["rule_id"] not in drop]
+    if not kept:
+        return 0, ACTION_ALLOW
+    scored = apply_family_dedup(kept)
+    pattern = match_pattern(scored, checks)
+    final = score(scored, checks, pattern)["final"]
+    tier = tier_for(final, scored, pattern)
+    return final, select_action(tier, pattern, scored)
+
+
+def _decision_trace(raw: list[dict], scored: list[dict], checks: list[dict], final: int, action: str) -> dict:
+    contributing = [signal for signal in scored if signal.get("score_contribution", 0) > 0]
+    counterfactuals = []
+    smallest = None
+    ids = [signal["rule_id"] for signal in contributing]
+    for size in range(1, len(ids) + 1):
+        for combo in combinations(ids, size):
+            new_score, new_action = _rescore(raw, checks, set(combo))
+            names = ", ".join(
+                signal["rule_name"] for signal in contributing if signal["rule_id"] in combo
+            )
+            line = (
+                f"Without {names}, the score falls from {final} to {new_score} and {_action_phrase(new_action)}."
+            )
+            if size == 1:
+                counterfactuals.append(
+                    {"removed": list(combo), "score": new_score, "action": new_action, "text": line}
+                )
+            if new_action == ACTION_ALLOW and smallest is None:
+                smallest = {"removed": list(combo), "score": new_score, "action": new_action, "text": line}
+        if smallest is not None:
+            break
+    return {
+        "action": action,
+        "rules": [
+            {"rule_id": signal["rule_id"], "rule_name": signal["rule_name"], "points": signal["score_contribution"]}
+            for signal in contributing
+        ],
+        "context": _context_lines(scored),
+        "counterfactuals": counterfactuals,
+        "smallest_allow": smallest,
     }

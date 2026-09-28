@@ -4,7 +4,10 @@ Base.metadata. Populated as models are added phase by phase.
 """
 from app.db.base_class import Base  # noqa: F401
 from app.models.ai_assistant_log import AiAssistantLog  # noqa: F401
+from app.models.account_restriction import AccountRestriction  # noqa: F401
 from app.models.amount_hold import AmountHold  # noqa: F401
+from app.models.case_event import CaseEvent  # noqa: F401
+from app.models.step_up_challenge import StepUpChallenge  # noqa: F401
 from app.models.fraud_alert import FraudAlert  # noqa: F401
 from app.models.risk_evaluation import RiskEvaluation  # noqa: F401
 from app.models.ledger_entry import LedgerEntry  # noqa: F401

@@ -12,9 +12,11 @@ built to respect them:
 2. **The Ledger Service is the source of financial truth.** Wallet balances are only ever
    mutated inside `app/services/ledger_service.py`, paired with a double-entry `ledger_entries`
    write and an Integrity Validator check.
-3. **Monitoring never executes before a successful transaction commit.** The Monitoring Engine
-   only runs off `Transaction Completed Event`, which fires strictly after PostgreSQL confirms
-   the commit - a rolled-back transaction can never produce a fraud alert.
+3. **A transfer is scored before it commits.** Allow and monitor commit that same transfer, then
+   the Monitoring Engine records the decision from `Transaction Completed Event`. Step-up and
+   hold roll back only the provisional transfer and ledger rows. The one-time confirmation, or
+   the held transaction with its reservation, is written afterward in its own database
+   transaction. A rolled-back transfer never becomes a completed payment.
 4. **Business logic lives only in backend services** (`app/services/*`). API endpoints
    (`app/api/v1/endpoints/*`) only translate HTTP <-> service calls and map exceptions to status
    codes.
@@ -38,8 +40,10 @@ built to respect them:
 3. **Ledger Service** (`app/services/ledger_service.py`) applies the balance mutation and writes
    a matching debit/credit pair to `ledger_entries`, validated by
    `app/services/integrity_validator.py`.
-4. The transaction and ledger writes are committed to **PostgreSQL** in one transaction.
-5. Only now does **`Transaction Completed Event`** fire (`app/core/events.py`), fanning out in
+4. The transfer and ledger rows are flushed, then scored. Allow and monitor commit them.
+   High risk rolls them back and stores an in-app confirmation. Critical risk rolls them back
+   and stores a held transaction with a reservation and no ledger movement.
+5. After a completed transfer, **`Transaction Completed Event`** fires (`app/core/events.py`), fanning out in
    parallel, synchronously, to two independent consumers:
    - The **Monitoring Engine** (`app/services/monitoring_engine.py`)
    - **Redis Pub/Sub**, for the live admin feed (`app/services/realtime.py`)

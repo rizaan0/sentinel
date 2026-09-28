@@ -12,6 +12,14 @@ class UserRole(str, enum.Enum):
 class TransactionStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
+    HELD = "held"
+    REJECTED = "rejected"
+
+
+class HoldKind(str, enum.Enum):
+    RISK = "risk"
+    RESERVATION = "reservation"
+    QUARANTINE = "quarantine"
 
 
 class LedgerEntryType(str, enum.Enum):

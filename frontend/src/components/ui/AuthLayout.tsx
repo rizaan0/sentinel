@@ -5,11 +5,15 @@ type Props = {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  /** Login and signup paint the pastel grain shader. Other auth pages keep the default canvas. */
+  transparent?: boolean;
 };
 
-export function AuthLayout({ title, subtitle, children }: Props) {
+export function AuthLayout({ title, subtitle, children, transparent = false }: Props) {
   return (
-    <main className="app-atmosphere relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
+    <main
+      className={`${transparent ? "bg-transparent" : "app-atmosphere"} relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-10 sm:px-6`}
+    >
       <div className="relative w-full max-w-md sm:max-w-lg">
         <div className="mb-8">
           <BrandMark />

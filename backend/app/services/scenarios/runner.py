@@ -14,8 +14,8 @@ from app.models.transaction import Transaction
 from app.services.prediction_service import compute_predictions
 from app.services.reconciliation_service import run_reconciliation
 from app.services.scenarios.cast import ensure_cast
-from app.services.scenarios.scripts import SCENARIOS, _pay
-from app.services.transfer_service import FundsOnHoldError, InsufficientBalanceError
+from app.services.scenarios.scripts import LAST_OUTCOME, SCENARIOS, _pay
+from app.services.transfer_service import AccountRestrictedError, FundsOnHoldError, InsufficientBalanceError
 
 ALERT_TIERS = {"suspicious", "high", "critical"}
 
@@ -73,6 +73,7 @@ def start_scenario(scenario_id: str, delay_seconds: float = STEP_DELAY_SECONDS) 
         if _status.state == "running":
             raise ScenarioBusyError("A scenario is already running")
         _stop.clear()
+        LAST_OUTCOME.clear()
         spec = SCENARIOS[scenario_id]
         _status.state = "running"
         _status.scenario_id = scenario_id
@@ -106,12 +107,20 @@ def _outcome_detail(transaction_id: str | None) -> str:
             .where(RiskEvaluation.transaction_id == transaction.id)
             .order_by(RiskEvaluation.id.desc())
         ).scalars().first()
+        if evaluation is not None and evaluation.outcome:
+            extra = f" Outcome {evaluation.outcome}."
+        else:
+            extra = ""
+        if LAST_OUTCOME:
+            extra += " " + " ".join(LAST_OUTCOME)
         if evaluation is None or evaluation.tier not in ALERT_TIERS:
             score = evaluation.risk_score if evaluation is not None else 0
             return (
-                f"Recorded as monitoring evidence. The score stayed under the alert line ({score})."
+                f"Recorded as monitoring evidence. The score stayed under the alert line ({score}).{extra}"
             )
-        return f"Scenario finished. Risk {evaluation.risk_score}, tier {evaluation.tier}."
+        held = transaction.status.value == "held"
+        held_note = " Held for review." if held else ""
+        return f"Scenario finished. Risk {evaluation.risk_score}, tier {evaluation.tier}.{held_note}{extra}"
     finally:
         db.close()
 
@@ -166,7 +175,7 @@ def _run(scenario_id: str, delay_seconds: float) -> None:
             _status.last_transaction_id = _pay(
                 db, cast[sender_key], cast[receiver_key], amount, remark
             )
-        except (FundsOnHoldError, InsufficientBalanceError) as exc:
+        except (FundsOnHoldError, InsufficientBalanceError, AccountRestrictedError) as exc:
             _wrap_up()
             _status.state = "finished"
             _status.detail = str(exc)

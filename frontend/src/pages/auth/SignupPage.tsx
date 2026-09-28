@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/useAuth";
 import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
+import { GrainPastelBackground } from "@/components/motion/grain-pastel-background";
 import { AuthLayout } from "../../components/ui/AuthLayout";
 import { Button } from "../../components/ui/Button";
 import { Field } from "../../components/ui/Field";
@@ -37,10 +38,13 @@ export default function SignupPage() {
   };
 
   return (
-    <AuthLayout
-      title="Create your account"
-      subtitle="Get a unique account number and 1000 ST Coins to start."
-    >
+    <div className="relative min-h-dvh bg-white">
+      <GrainPastelBackground />
+      <AuthLayout
+        transparent
+        title="Create your account"
+        subtitle="Get a unique account number and 1000 ST Coins to start."
+      >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Field label="Full name" htmlFor="signup-name">
           <Input
@@ -94,6 +98,7 @@ export default function SignupPage() {
           </Link>
         </p>
       </form>
-    </AuthLayout>
+      </AuthLayout>
+    </div>
   );
 }

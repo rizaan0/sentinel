@@ -34,6 +34,8 @@ class FraudAlert(Base, TimestampMixin):
     rules_version: Mapped[str | None] = mapped_column(nullable=True)
     user_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decision_trace: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    outcome: Mapped[str | None] = mapped_column(nullable=True)
 
     transaction: Mapped["Transaction"] = relationship()  # noqa: F821
     user: Mapped["User"] = relationship(foreign_keys=[user_id])  # noqa: F821

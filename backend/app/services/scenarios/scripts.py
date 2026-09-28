@@ -1,6 +1,7 @@
 """Scenario scripts among the eight fixed accounts. Every watched transfer goes through execute_transfer."""
 
 import time
+import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -15,22 +16,36 @@ from app.models.wallet import Wallet
 from app.schemas.transaction import TransferRequest
 from app.services.reconciliation_service import run_reconciliation
 from app.services.scenarios.cast import DEMO_PIN, ensure_cast
-from app.services.transfer_service import execute_transfer
+from app.services.transfer_service import (
+    StepUpRequired,
+    TransactionHeld,
+    confirm_step_up,
+    execute_transfer,
+)
+
+LAST_OUTCOME: list[str] = []
 
 Step = tuple[str, str, str, str]
 
 
 def _pay(db: Session, sender: User, receiver: User, amount: str, remark: str) -> str:
-    transaction = execute_transfer(
-        db,
-        sender,
-        TransferRequest(
-            recipient_account_number=receiver.account_number,
-            amount=Decimal(amount),
-            remark=remark,
-            pin=DEMO_PIN,
-        ),
+    key = str(uuid.uuid4())
+    request = TransferRequest(
+        recipient_account_number=receiver.account_number,
+        amount=Decimal(amount),
+        remark=remark,
+        pin=DEMO_PIN,
+        idempotency_key=key,
     )
+    try:
+        transaction = execute_transfer(db, sender, request)
+    except StepUpRequired as exc:
+        transaction = confirm_step_up(db, sender, exc.challenge_id, exc.code, key)
+        LAST_OUTCOME.append(f"STEP_UP_VERIFIED → ALLOW score {exc.risk_score}")
+        return transaction.transaction_id
+    except TransactionHeld as exc:
+        LAST_OUTCOME.append(f"Held for review. {exc.transaction_id}")
+        return exc.transaction_id
     return transaction.transaction_id
 
 
@@ -233,6 +248,22 @@ def dormant_reactivation(db: Session) -> list[Step]:
     ]
 
 
+def group_collection(db: Session) -> list[Step]:
+    payers = ("rohan", "sara", "dev", "leela", "meera")
+    inbound = [(payer, "arjun", "40.00", "Group collection") for payer in payers]
+    return [*inbound, ("arjun", "nia", "180.00", "Paid onward")]
+
+
+def critical_pass_through(db: Session) -> list[Step]:
+    """Stacks fan-in, a large onward payment, and a new recipient so a fresh cast can reach critical."""
+    history = [("kabir", "meera", "15.00", "Usual amount") for _ in range(5)]
+    inbound = [
+        (payer, "kabir", "90.00", "Critical inbound")
+        for payer in ("arjun", "rohan", "sara", "dev", "leela")
+    ]
+    return [*history, *inbound, ("kabir", "nia", "430.00", "Critical forward")]
+
+
 SCENARIOS: dict[str, dict] = {
     "normal": {
         "title": "Normal activity",
@@ -273,6 +304,16 @@ SCENARIOS: dict[str, dict] = {
         "title": "Dormant reactivation",
         "summary": "Kabir has been quiet for over 30 days, then sends several payments.",
         "build": dormant_reactivation,
+    },
+    "group_collection": {
+        "title": "Group collection paid onward",
+        "summary": "Five accounts pay Arjun, who pays Nia. A repeat after a legitimate-group review should score lower.",
+        "build": group_collection,
+    },
+    "critical_pass_through": {
+        "title": "Critical pass-through",
+        "summary": "A fresh burst into Kabir is forwarded to Nia. The recorded tier is whatever the engine assigns.",
+        "build": critical_pass_through,
     },
     "reconciliation": {
         "title": "Reconciliation",

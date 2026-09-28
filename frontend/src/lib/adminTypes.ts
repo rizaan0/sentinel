@@ -74,6 +74,13 @@ export interface FraudAlert {
   user_explanation?: string | null;
   hold_amount?: string | null;
   hold_status?: string | null;
+  decision_trace?: {
+    action?: string;
+    context?: string[];
+    counterfactuals?: { text: string }[];
+    smallest_allow?: { text: string } | null;
+  } | null;
+  outcome?: string | null;
 }
 
 export interface ReconciliationDiscrepancy {

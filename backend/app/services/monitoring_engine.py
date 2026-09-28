@@ -11,7 +11,8 @@ from app.core.config import settings
 from app.core.events import TransactionCompletedEvent
 from app.db.session import SessionLocal
 from app.models.amount_hold import AmountHold
-from app.models.enums import AlertStatus, HoldStatus
+from app.models.enums import AlertStatus, HoldKind, HoldStatus
+from app.services.case_events import record_case_event
 from app.models.fraud_alert import FraudAlert
 from app.models.risk_evaluation import RiskEvaluation
 from app.models.transaction import Transaction
@@ -49,6 +50,7 @@ def _place_hold(db, evaluation: dict, alert: FraudAlert, transaction: Transactio
         alert_id=alert.id,
         amount=amount,
         status=HoldStatus.ACTIVE,
+        kind=HoldKind.RISK.value,
         reason_codes=[signal["rule_id"] for signal in evaluation["signals"] if signal.get("score_contribution", 0) > 0],
         expires_at=now + timedelta(days=settings.HOLD_MAX_DAYS),
         explanation_due_at=now + timedelta(days=settings.HOLD_EXPLANATION_DAYS),
@@ -68,7 +70,7 @@ def evaluate_transaction_event(event: TransactionCompletedEvent) -> None:
             logger.warning("Monitoring: transaction %s not found", event.transaction_id)
             return
 
-        result = evaluate(db, transaction)
+        result = event.result if event.result is not None else evaluate(db, transaction)
         if result is None:
             return
 
@@ -85,6 +87,8 @@ def evaluate_transaction_event(event: TransactionCompletedEvent) -> None:
             rules_version=result["rules_version"],
             narrative=result["narrative"],
             hold_placed=bool(result["hold"]),
+            decision_trace=result.get("decision_trace"),
+            outcome=result.get("outcome") or result.get("action"),
         )
         db.add(record)
 
@@ -115,6 +119,8 @@ def evaluate_transaction_event(event: TransactionCompletedEvent) -> None:
             score_breakdown=result["score_breakdown"],
             rules_version=result["rules_version"],
             narrative=result["narrative"],
+            decision_trace=result.get("decision_trace"),
+            outcome=result.get("outcome") or result.get("action"),
         )
         if existing is not None:
             for key, value in payload.items():
@@ -129,6 +135,13 @@ def evaluate_transaction_event(event: TransactionCompletedEvent) -> None:
             )
             db.add(alert)
         db.flush()
+        record_case_event(
+            db,
+            alert.id,
+            "alert_updated" if existing is not None else "alert_created",
+            "system",
+            {"tier": result["tier"], "risk_score": result["risk_score"]},
+        )
 
         if result["hold"]:
             _place_hold(db, result, alert, transaction)

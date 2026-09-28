@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.amount_hold import AmountHold
+from app.models.case_event import CaseEvent
 from app.models.fraud_alert import FraudAlert
 from app.models.reconciliation_report import ReconciliationReport
 from app.models.risk_prediction import RiskPrediction
@@ -57,6 +58,14 @@ def _serialize_alert(db: Session, alert: FraudAlert) -> dict:
         "score_breakdown": alert.score_breakdown,
         "narrative": alert.narrative,
         "user_explanation": alert.user_explanation,
+        "decision_trace": alert.decision_trace,
+        "outcome": alert.outcome,
+        "reviews": [
+            {"actor": event.actor, "detail": event.detail, "created_at": event.created_at.isoformat()}
+            for event in db.execute(
+                select(CaseEvent).where(CaseEvent.alert_id == alert.id, CaseEvent.kind == "review")
+            ).scalars().all()
+        ],
         "hold": None
         if hold is None
         else {"amount": str(hold.amount), "status": hold.status.value},

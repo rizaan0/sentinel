@@ -32,6 +32,7 @@ export interface AmountHoldNotice {
   id: number;
   amount: string;
   status: string;
+  kind?: string;
   reason_codes: string[];
   expires_at: string;
   explanation_due_at: string;

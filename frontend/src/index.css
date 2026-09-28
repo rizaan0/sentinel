@@ -72,6 +72,12 @@
   --shadow-lg: 0 20px 50px oklch(0.229 0.055 264.481 / 0.08);
 
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.229 0.055 264.481);
+  --color-foreground: oklch(0.229 0.055 264.481);
+  --color-muted: oklch(0.963 0.006 264.481);
+  --color-muted-foreground: oklch(0.446 0.108 264.481);
 }
 
 :root {

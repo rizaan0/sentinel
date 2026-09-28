@@ -50,6 +50,12 @@ def narrate(
         )
     cleared = [check for check in checks if check.get("cleared")]
     failed = [check for check in checks if not check.get("cleared")]
+    reviewed = next(
+        (check for check in checks if check["check"] == "reviewed_legitimate_pattern" and check.get("detail")),
+        None,
+    )
+    if reviewed:
+        parts.append(reviewed["detail"])
     if cleared:
         parts.append("Context that lowered concern: " + "; ".join(_check_phrase(c) for c in cleared) + ".")
     if failed:

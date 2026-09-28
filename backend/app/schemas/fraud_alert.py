@@ -52,6 +52,8 @@ class FraudAlertResponse(BaseModel):
     user_explanation: str | None = None
     hold_amount: str | None = None
     hold_status: str | None = None
+    decision_trace: dict[str, Any] | None = None
+    outcome: str | None = None
 
 
 class RuleStat(BaseModel):
@@ -60,10 +62,17 @@ class RuleStat(BaseModel):
     false_positives: int
 
 
+class PatternFeedback(BaseModel):
+    matched: int
+    stayed_under_alert: int
+    later_confirmed: int
+
+
 class HoldResponse(BaseModel):
     id: int
     amount: str
     status: HoldStatus
+    kind: str = "risk"
     reason_codes: list[str]
     expires_at: datetime
     explanation_due_at: datetime

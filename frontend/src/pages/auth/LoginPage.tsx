@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/useAuth";
 import { cue } from "../../lib/cue";
 import { extractErrorMessage } from "../../lib/errors";
+import { GrainPastelBackground } from "@/components/motion/grain-pastel-background";
 import { AuthLayout } from "../../components/ui/AuthLayout";
 import { Button } from "../../components/ui/Button";
 import { Field } from "../../components/ui/Field";
@@ -40,7 +41,9 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Log in to send ST Coins and manage your account.">
+    <div className="relative min-h-dvh bg-white">
+      <GrainPastelBackground />
+      <AuthLayout transparent title="Welcome back" subtitle="Log in to send ST Coins and manage your account.">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Field label="Email" htmlFor="login-email" error={error ? undefined : undefined}>
           <Input
@@ -81,6 +84,7 @@ export default function LoginPage() {
           </Link>
         </p>
       </form>
-    </AuthLayout>
+      </AuthLayout>
+    </div>
   );
 }

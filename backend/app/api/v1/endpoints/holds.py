@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models.amount_hold import AmountHold
-from app.models.enums import HoldStatus
+from app.models.account_restriction import AccountRestriction
+from app.models.enums import HoldStatus, TransactionStatus
+from app.models.transaction import Transaction
+from app.services.case_events import record_case_event
 from app.models.fraud_alert import FraudAlert
 from app.models.user import User
 from app.schemas.fraud_alert import ExplanationRequest, HoldResponse
@@ -24,12 +27,39 @@ def _to_hold(hold: AmountHold, db: Session) -> HoldResponse:
         id=hold.id,
         amount=str(hold.amount),
         status=hold.status,
+        kind=hold.kind,
         reason_codes=hold.reason_codes or [],
         expires_at=hold.expires_at,
         explanation_due_at=hold.explanation_due_at,
         narrative=hold.narrative,
         user_explanation=explanation,
     )
+
+
+@router.get("/flags")
+def account_flags(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    restricted = (
+        db.execute(
+            select(AccountRestriction.id).where(
+                AccountRestriction.user_id == current_user.id,
+                AccountRestriction.active.is_(True),
+            )
+        ).scalar_one_or_none()
+        is not None
+    )
+    held = db.execute(
+        select(Transaction).where(
+            Transaction.sender_id == current_user.id,
+            Transaction.status == TransactionStatus.HELD,
+        )
+    ).scalars().all()
+    return {
+        "restricted": restricted,
+        "held": [
+            {"transaction_id": item.transaction_id, "amount": str(item.amount), "remark": item.remark}
+            for item in held
+        ],
+    }
 
 
 @router.get("/me", response_model=list[HoldResponse])
@@ -41,7 +71,10 @@ def my_holds(
     holds = (
         db.execute(
             select(AmountHold)
-            .where(AmountHold.user_id == current_user.id, AmountHold.status == HoldStatus.ACTIVE)
+            .where(
+                AmountHold.user_id == current_user.id,
+                AmountHold.status.in_([HoldStatus.ACTIVE, HoldStatus.CONFIRMED]),
+            )
             .order_by(AmountHold.created_at.desc())
         )
         .scalars()
@@ -66,6 +99,7 @@ def explain_hold(
     if alert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hold not found")
     alert.user_explanation = payload.text
+    record_case_event(db, alert.id, "user_explanation", current_user.full_name, {"text": payload.text})
     db.commit()
     db.refresh(hold)
     return _to_hold(hold, db)

@@ -14,7 +14,13 @@ from app.models.amount_hold import AmountHold
 from app.models.enums import AlertStatus, HoldStatus
 from app.models.fraud_alert import FraudAlert
 from app.models.user import User
-from app.schemas.fraud_alert import FraudAlertResponse, RuleStat
+from app.models.account_restriction import AccountRestriction
+from app.models.enums import HoldKind, TransactionStatus
+from app.models.risk_evaluation import RiskEvaluation
+from app.schemas.fraud_alert import FraudAlertResponse, PatternFeedback, RuleStat
+from app.services.case_events import record_case_event
+from app.services.case_graph import build_case
+from app.services.containment_service import reject_held, settle_held, trace_and_quarantine
 from app.services.risk.rules import RULES
 
 router = APIRouter()
@@ -64,7 +70,62 @@ def _to_response(alert: FraudAlert, db: Session) -> FraudAlertResponse:
         user_explanation=alert.user_explanation,
         hold_amount=str(hold.amount) if hold is not None else None,
         hold_status=hold.status.value if hold is not None else None,
+        decision_trace=alert.decision_trace,
+        outcome=alert.outcome,
     )
+
+
+def _confirm(db: Session, alert: FraudAlert, admin: User) -> None:
+    if alert.transaction is not None and alert.transaction.status == TransactionStatus.HELD:
+        reject_held(db, alert, admin.full_name)
+        return
+    holds = db.execute(select(AmountHold).where(AmountHold.alert_id == alert.id)).scalars().all()
+    for hold in holds:
+        if hold.status == HoldStatus.ACTIVE and hold.kind == HoldKind.RISK.value:
+            hold.status = HoldStatus.CONFIRMED
+            hold.released_by = admin.id
+    trace_and_quarantine(db, alert, admin.full_name)
+    record_case_event(db, alert.id, "status_change", admin.full_name, {"status": "confirmed_fraud"})
+
+
+@router.post("/{alert_id}/restriction/lift", response_model=FraudAlertResponse)
+def lift_restriction(
+    alert_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> FraudAlertResponse:
+    alert = db.get(FraudAlert, alert_id)
+    if alert is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
+    rows = db.execute(
+        select(AccountRestriction).where(AccountRestriction.alert_id == alert.id, AccountRestriction.active.is_(True))
+    ).scalars().all()
+    for row in rows:
+        row.active = False
+    record_case_event(db, alert.id, "restriction", admin.full_name, {"active": False})
+    db.commit()
+    db.refresh(alert)
+    return _to_response(alert, db)
+
+
+@router.post("/{alert_id}/quarantine/{hold_id}/release", response_model=FraudAlertResponse)
+def release_quarantine(
+    alert_id: int,
+    hold_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> FraudAlertResponse:
+    alert = db.get(FraudAlert, alert_id)
+    hold = db.get(AmountHold, hold_id)
+    if alert is None or hold is None or hold.alert_id != alert.id or hold.kind != HoldKind.QUARANTINE.value:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quarantine not found")
+    hold.status = HoldStatus.RELEASED
+    hold.released_by = admin.id
+    hold.released_at = datetime.now(UTC)
+    record_case_event(db, alert.id, "quarantine", admin.full_name, {"hold_id": hold.id, "released": True})
+    db.commit()
+    db.refresh(alert)
+    return _to_response(alert, db)
 
 
 def _release_holds(db: Session, alert: FraudAlert, admin: User, new_status: HoldStatus) -> None:
@@ -124,6 +185,32 @@ def rule_stats(
     return [RuleStat(rule_id=rule_id, **stats) for rule_id, stats in counts.items()]
 
 
+@router.get("/pattern-feedback", response_model=PatternFeedback)
+def pattern_feedback(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PatternFeedback:
+    rows = db.execute(select(RiskEvaluation)).scalars().all()
+    matched = stayed = confirmed = 0
+    for row in rows:
+        checks = row.context_checks or []
+        if not any(check.get("check") == "reviewed_legitimate_pattern" and check.get("cleared") for check in checks):
+            continue
+        matched += 1
+        if row.tier not in ALERT_TIERS:
+            stayed += 1
+        later = db.execute(
+            select(FraudAlert.id).where(
+                FraudAlert.user_id == row.subject_user_id,
+                FraudAlert.status == AlertStatus.CONFIRMED_FRAUD,
+                FraudAlert.created_at >= row.created_at,
+            )
+        ).scalars().first()
+        if later is not None:
+            confirmed += 1
+    return PatternFeedback(matched=matched, stayed_under_alert=stayed, later_confirmed=confirmed)
+
+
 @router.get("/{alert_id}", response_model=FraudAlertResponse)
 def get_alert(
     alert_id: int,
@@ -138,6 +225,20 @@ def get_alert(
 
 class UpdateAlertStatusRequest(BaseModel):
     status: AlertStatus
+    reason: str | None = None
+    note: str | None = None
+
+
+@router.get("/{alert_id}/case")
+def get_case(
+    alert_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    alert = db.get(FraudAlert, alert_id)
+    if alert is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
+    return build_case(db, alert)
 
 
 @router.patch("/{alert_id}/status", response_model=FraudAlertResponse)
@@ -150,14 +251,27 @@ def update_alert_status(
     alert = db.get(FraudAlert, alert_id)
     if alert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
+    if payload.status == AlertStatus.FALSE_POSITIVE and not payload.reason:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="A false positive needs a reason")
     alert.status = payload.status
     if payload.status == AlertStatus.FALSE_POSITIVE:
         _release_holds(db, alert, admin, HoldStatus.RELEASED)
+        signature = (alert.decision_trace or {}).get("signature") or {}
+        record_case_event(
+            db,
+            alert.id,
+            "review",
+            admin.full_name,
+            {
+                "reason": payload.reason,
+                "note": payload.note,
+                "subject_user_id": alert.subject_user_id or alert.user_id,
+                **signature,
+            },
+        )
     if payload.status == AlertStatus.CONFIRMED_FRAUD:
-        holds = db.execute(select(AmountHold).where(AmountHold.alert_id == alert.id)).scalars().all()
-        for hold in holds:
-            if hold.status == HoldStatus.ACTIVE:
-                hold.status = HoldStatus.CONFIRMED
+        _confirm(db, alert, admin)
+    record_case_event(db, alert.id, "status_change", admin.full_name, {"status": payload.status.value})
     db.add(alert)
     db.commit()
     db.refresh(alert)
@@ -173,9 +287,13 @@ def release_hold(
     alert = db.get(FraudAlert, alert_id)
     if alert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
-    _release_holds(db, alert, admin, HoldStatus.RELEASED)
+    if alert.transaction is not None and alert.transaction.status == TransactionStatus.HELD:
+        settle_held(db, alert, admin.full_name)
+    else:
+        _release_holds(db, alert, admin, HoldStatus.RELEASED)
     if alert.status == AlertStatus.OPEN:
         alert.status = AlertStatus.INVESTIGATING
+    record_case_event(db, alert.id, "hold_released", admin.full_name, {})
     db.commit()
     db.refresh(alert)
     return _to_response(alert, db)
@@ -191,11 +309,7 @@ def confirm_fraud(
     if alert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
     alert.status = AlertStatus.CONFIRMED_FRAUD
-    holds = db.execute(select(AmountHold).where(AmountHold.alert_id == alert.id)).scalars().all()
-    for hold in holds:
-        if hold.status == HoldStatus.ACTIVE:
-            hold.status = HoldStatus.CONFIRMED
-            hold.released_by = admin.id
+    _confirm(db, alert, admin)
     db.commit()
     db.refresh(alert)
     return _to_response(alert, db)

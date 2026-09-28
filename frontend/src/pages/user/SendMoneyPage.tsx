@@ -135,6 +135,23 @@ export default function SendMoneyPage() {
     setStep("review");
   };
 
+  const [challenge, setChallenge] = useState<{
+    challenge_id: string;
+    code: string;
+    reasons: string[];
+    idempotency_key: string;
+  } | null>(null);
+  const [otp, setOtp] = useState("");
+
+  const finishReceipt = async (receipt: TransactionReceipt) => {
+    setReceipt(receipt);
+    setPinOpen(false);
+    setChallenge(null);
+    setStep("receipt");
+    cue.success("payment");
+    await refreshUser();
+  };
+
   const onAuthorize = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -145,24 +162,60 @@ export default function SendMoneyPage() {
     }
     setSubmitting(true);
     cue.loading();
+    const idempotencyKey = crypto.randomUUID();
     try {
       const response = await api.post<TransactionReceipt>("/transactions/transfer", {
         recipient_account_number: recipient!.account_number,
         amount,
         remark: remark || null,
         pin,
+        idempotency_key: idempotencyKey,
       });
-      setReceipt(response.data);
-      setPinOpen(false);
-      setStep("receipt");
-      cue.success("payment");
-      await refreshUser();
+      if (response.status === 202) {
+        setError("Held for review. The money has not moved. You can still receive money.");
+        setPinOpen(false);
+        cue.error();
+        return;
+      }
+      await finishReceipt(response.data);
     } catch (err) {
+      const response = (err as { response?: { status?: number; data?: { challenge_id?: string; code?: string; reasons?: string[]; detail?: string } } }).response;
+      if (response?.status === 428 && response.data?.challenge_id && response.data.code) {
+        setChallenge({
+          challenge_id: response.data.challenge_id,
+          code: response.data.code,
+          reasons: response.data.reasons ?? [],
+          idempotency_key: idempotencyKey,
+        });
+        setPinOpen(false);
+        cue.success("payment");
+        return;
+      }
       cue.error();
       setError(extractErrorMessage(err, "Transfer failed."));
     } finally {
       setSubmitting(false);
       setPin("");
+    }
+  };
+
+  const onConfirmCode = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!challenge) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await api.post<TransactionReceipt>("/transactions/transfer/confirm", {
+        challenge_id: challenge.challenge_id,
+        code: otp,
+        idempotency_key: challenge.idempotency_key,
+      });
+      await finishReceipt(response.data);
+    } catch (err) {
+      cue.error();
+      setError(extractErrorMessage(err, "That code was not accepted."));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -390,6 +443,44 @@ export default function SendMoneyPage() {
               </Field>
               {error && <InlineAlert>{error}</InlineAlert>}
             </form>
+          </Modal>
+          <Modal
+            open={Boolean(challenge)}
+            title="Confirm this transfer"
+            onClose={() => setChallenge(null)}
+            footer={
+              <Button type="submit" form="otp-form" disabled={submitting} fullWidth>
+                Confirm code
+              </Button>
+            }
+          >
+            {challenge && (
+              <form id="otp-form" onSubmit={onConfirmCode} className="space-y-3">
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  This transfer scored high risk. Enter the code shown here. It confirms the person
+                  at this screen. It is not a text-message code.
+                </p>
+                <p className="text-center text-2xl font-semibold tracking-[0.3em]">{challenge.code}</p>
+                {challenge.reasons.length > 0 && (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--color-text-muted)]">
+                    {challenge.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                )}
+                <Field label="Code" htmlFor="transfer-otp">
+                  <Input
+                    id="transfer-otp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  />
+                </Field>
+                {error && <InlineAlert>{error}</InlineAlert>}
+              </form>
+            )}
           </Modal>
         </div>
       )}

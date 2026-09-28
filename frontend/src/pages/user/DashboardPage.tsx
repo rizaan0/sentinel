@@ -19,6 +19,8 @@ export default function DashboardPage() {
   const [history, setHistory] = useState<PaginatedTransactions | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [holds, setHolds] = useState<AmountHoldNotice[]>([]);
+  const [restricted, setRestricted] = useState(false);
+  const [heldTransfers, setHeldTransfers] = useState<{ transaction_id: string; amount: string }[]>([]);
   const [explanation, setExplanation] = useState("");
 
   useEffect(() => {
@@ -30,6 +32,16 @@ export default function DashboardPage() {
       .get<AmountHoldNotice[]>("/holds/me")
       .then((response) => setHolds(response.data))
       .catch(() => setHolds([]));
+    api
+      .get<{ restricted: boolean; held: { transaction_id: string; amount: string }[] }>("/holds/flags")
+      .then((response) => {
+        setRestricted(response.data.restricted);
+        setHeldTransfers(response.data.held);
+      })
+      .catch(() => {
+        setRestricted(false);
+        setHeldTransfers([]);
+      });
   }, []);
 
   const submitExplanation = async (holdId: number) => {
@@ -59,12 +71,37 @@ export default function DashboardPage() {
         }
       />
 
+      {restricted && (
+        <section className="surface-card space-y-2 p-5">
+          <h2 className="text-sm font-semibold">Outgoing transfers restricted</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            You cannot send money while this case is open. You can still receive money.
+          </p>
+        </section>
+      )}
+      {heldTransfers.map((item) => (
+        <section key={item.transaction_id} className="surface-card space-y-2 p-5">
+          <h2 className="text-sm font-semibold">Held for review</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {item.amount} ST has not moved. You can still receive money. The rest of your balance
+            stays available except for this reservation.
+          </p>
+        </section>
+      ))}
       {holds.map((hold) => (
         <section key={hold.id} className="surface-card space-y-3 p-5">
-          <h2 className="text-sm font-semibold">Amount on hold</h2>
+          <h2 className="text-sm font-semibold">
+            {hold.kind === "quarantine"
+              ? "Quarantined amount"
+              : hold.kind === "reservation"
+                ? "Reserved for review"
+                : "Amount on hold"}
+          </h2>
           <p className="text-sm text-[var(--color-text-muted)]">
-            {hold.amount} ST is held against your available balance. You can still receive money.
-            Respond by {new Date(hold.explanation_due_at).toLocaleDateString()}.
+            {hold.amount} ST cannot be sent. You can still receive money.
+            {hold.kind !== "quarantine" && hold.kind !== "reservation" && (
+              <> Respond by {new Date(hold.explanation_due_at).toLocaleDateString()}.</>
+            )}
           </p>
           {hold.narrative && <p className="text-sm text-pretty">{hold.narrative}</p>}
           {hold.user_explanation ? (

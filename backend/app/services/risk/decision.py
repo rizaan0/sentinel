@@ -14,8 +14,13 @@ REDUCTION_CHECKS = {
     "inbound_profile",
     "activity_abnormality",
     "onward_transfer_ratio",
-    "prior_false_positive",
+    "reviewed_legitimate_pattern",
 }
+
+ACTION_ALLOW = "allow"
+ACTION_MONITOR = "allow_monitor"
+ACTION_STEP_UP = "step_up"
+ACTION_HOLD = "hold_transaction"
 
 
 def _fired(signals: list[dict], rule_id: str) -> bool:
@@ -123,6 +128,20 @@ def tier_for(final: int, signals: list[dict], pattern: str | None) -> str:
     if has_strong:
         return TIER_CRITICAL
     return TIER_HIGH
+
+
+def select_action(tier: str, pattern: str | None, signals: list[dict]) -> str:
+    """Choose how much of the account to restrict. Detection stays separate from that choice."""
+    del pattern
+    if tier == TIER_CRITICAL and any(
+        signal["severity"] == "strong" and signal["score_contribution"] > 0 for signal in signals
+    ):
+        return ACTION_HOLD
+    if tier == TIER_HIGH:
+        return ACTION_STEP_UP
+    if tier == TIER_SUSPICIOUS:
+        return ACTION_MONITOR
+    return ACTION_ALLOW
 
 
 def should_hold(tier: str, pattern: str | None, signals: list[dict]) -> bool:

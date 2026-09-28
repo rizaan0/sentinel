@@ -10,13 +10,29 @@ def signup_with_pin(client, email, password="supersecret1", pin="1234"):
 
 
 def transfer(client, headers, recipient_account_number, amount, pin, remark=None):
-    return client.post(
+    import uuid
+
+    key = str(uuid.uuid4())
+    response = client.post(
         "/api/v1/transactions/transfer",
         json={
             "recipient_account_number": recipient_account_number,
             "amount": amount,
             "remark": remark,
             "pin": pin,
+            "idempotency_key": key[:64],
+        },
+        headers=headers,
+    )
+    if response.status_code != 428:
+        return response
+    body = response.json()
+    return client.post(
+        "/api/v1/transactions/transfer/confirm",
+        json={
+            "challenge_id": body["challenge_id"],
+            "code": body["code"],
+            "idempotency_key": key[:64],
         },
         headers=headers,
     )

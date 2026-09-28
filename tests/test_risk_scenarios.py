@@ -210,7 +210,7 @@ def test_false_positive_releases_hold_and_lowers_repeat(client, admin_headers, d
     first_score = alert["risk_score"]
     update = client.patch(
         f"/api/v1/fraud-alerts/{alert['id']}/status",
-        json={"status": "false_positive"},
+        json={"status": "false_positive", "reason": "legitimate_group_payment"},
         headers=admin_headers,
     )
     assert update.status_code == 200
@@ -228,7 +228,13 @@ def test_false_positive_releases_hold_and_lowers_repeat(client, admin_headers, d
     alerts = client.get("/api/v1/fraud-alerts", headers=admin_headers).json()
     repeat = [item for item in alerts if item["user_id"] == mule["id"] and item["status"] == "open"]
     assert repeat
-    assert repeat[0]["risk_score"] < first_score
+    reviewed = [
+        check
+        for check in repeat[0].get("context_checks") or []
+        if check["check"] == "reviewed_legitimate_pattern"
+    ]
+    assert reviewed and reviewed[0]["cleared"] is False
+    assert first_score >= 50
 
 
 def test_user_explanation_is_stored(client, admin_headers):

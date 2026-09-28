@@ -29,6 +29,7 @@ class Transaction(Base, TimestampMixin):
     status: Mapped[TransactionStatus] = mapped_column(
         default=TransactionStatus.COMPLETED, nullable=False
     )
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
 
     sender: Mapped["User"] = relationship(foreign_keys=[sender_id])  # noqa: F821
     receiver: Mapped["User"] = relationship(foreign_keys=[receiver_id])  # noqa: F821

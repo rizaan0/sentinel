@@ -31,6 +31,14 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
   const [stats, setStats] = useState<RuleStat[]>([]);
   const [active, setActive] = useState<FraudAlert | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [reason, setReason] = useState("legitimate_group_payment");
+  const [note, setNote] = useState("");
+  const [caseView, setCaseView] = useState<{
+    title: string;
+    nodes: { id: string; type: string; label: string; role?: string }[];
+    timeline: { at: string; kind: string; text: string }[];
+  } | null>(null);
+  const [feedback, setFeedback] = useState<{ matched: number; stayed_under_alert: number; later_confirmed: number } | null>(null);
 
   const load = () => {
     setLoadError(null);
@@ -38,6 +46,9 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
       .get<FraudAlert[]>("/fraud-alerts")
       .then((response) => setAlerts(response.data))
       .catch(() => setLoadError("Could not load fraud alerts."));
+    api.get<{ matched: number; stayed_under_alert: number; later_confirmed: number }>("/fraud-alerts/pattern-feedback").then((response) => {
+      setFeedback(response.data);
+    }).catch(() => setFeedback(null));
     api.get<RuleStat[]>("/fraud-alerts/rule-stats").then((response) => {
       const rows = response.data;
       if (Array.isArray(rows) && rows.every((row) => row && "rule_id" in row)) {
@@ -48,8 +59,17 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
 
   useEffect(load, [refreshKey]);
 
-  const updateStatus = async (alertId: number, status: AlertStatus) => {
-    const response = await api.patch<FraudAlert>(`/fraud-alerts/${alertId}/status`, { status });
+  const openCase = (alert: FraudAlert) => {
+    setActive(alert);
+    api.get(`/fraud-alerts/${alert.id}/case`).then((response) => setCaseView(response.data)).catch(() => setCaseView(null));
+  };
+
+  const updateStatus = async (alertId: number, status: AlertStatus, reviewReason?: string) => {
+    const response = await api.patch<FraudAlert>(`/fraud-alerts/${alertId}/status`, {
+      status,
+      reason: status === "false_positive" ? reviewReason || reason : undefined,
+      note: status === "false_positive" ? note : undefined,
+    });
     load();
     setActive((prev) => (prev && prev.id === alertId ? { ...prev, ...response.data } : prev));
   };
@@ -127,7 +147,14 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
                 <select
                   id={`status-${alert.id}`}
                   value={alert.status}
-                  onChange={(e) => updateStatus(alert.id, e.target.value as AlertStatus)}
+                  onChange={(e) => {
+                    const next = e.target.value as AlertStatus;
+                    if (next === "false_positive") {
+                      openCase(alert);
+                      return;
+                    }
+                    void updateStatus(alert.id, next);
+                  }}
                   className="input !w-auto min-h-11 py-2 text-sm"
                 >
                   {STATUS_OPTIONS.map((option) => (
@@ -138,7 +165,7 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
                 </select>
                 <button
                   type="button"
-                  onClick={() => setActive(alert)}
+                  onClick={() => openCase(alert)}
                   className="btn-secondary !min-h-10 !px-3 !py-2 text-xs"
                 >
                   Investigate
@@ -166,8 +193,67 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
               <span aria-hidden>·</span>
               <TransactionId id={active.transaction_public_id} />
             </div>
+            {active.outcome && (
+              <p className="text-sm font-medium">{active.outcome}</p>
+            )}
+            {active.decision_trace?.action && (
+              <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                Action {humanizeLabel(active.decision_trace.action)}
+              </p>
+            )}
             {active.narrative && (
               <p className="text-sm text-pretty text-[var(--color-text-muted)]">{active.narrative}</p>
+            )}
+            {active.decision_trace?.context && active.decision_trace.context.length > 0 && (
+              <ul className="list-disc pl-5 text-sm">
+                {active.decision_trace.context.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            )}
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold">What would change this decision?</p>
+              {(active.decision_trace?.counterfactuals ?? []).map((item) => (
+                <p key={item.text}>{item.text}</p>
+              ))}
+              {active.decision_trace?.smallest_allow?.text && (
+                <p>{active.decision_trace.smallest_allow.text}</p>
+              )}
+            </div>
+            {active.context_checks?.some((check) => check.check === "reviewed_legitimate_pattern" && check.cleared) && (
+              <p className="text-sm">This pattern was reviewed as legitimate.</p>
+            )}
+            {caseView && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">{caseView.title}</p>
+                <svg viewBox="0 0 360 120" className="w-full" role="img" aria-label="Case graph">
+                  {caseView.nodes
+                    .filter((node) => node.type === "account")
+                    .map((node, index, list) => {
+                      const x = 40 + (index * 280) / Math.max(list.length - 1, 1);
+                      return (
+                        <g key={node.id}>
+                          <circle cx={x} cy={48} r={18} fill={node.role === "subject" ? "var(--color-accent)" : "var(--color-ink-200)"} />
+                          <text x={x} y={90} textAnchor="middle" fontSize="10">
+                            {node.label.split(" ")[0]}
+                          </text>
+                        </g>
+                      );
+                    })}
+                </svg>
+                <ol className="space-y-1 text-sm">
+                  {caseView.timeline.map((item) => (
+                    <li key={`${item.at}-${item.text}`}>
+                      {new Date(item.at).toLocaleString()} · {item.text}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {feedback && (
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Reviewed patterns matched {feedback.matched} evaluations. {feedback.stayed_under_alert} stayed under the alert line. {feedback.later_confirmed} were later confirmed fraud.
+              </p>
             )}
             <ul className="space-y-2 text-sm">
               {(active.signals?.length
@@ -207,25 +293,36 @@ export default function FraudAlertsTab({ refreshKey = 0 }: { refreshKey?: number
                 {active.score_breakdown.reductions ?? 0}.
               </p>
             )}
-            {active.hold_amount && (
-              <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--color-ink-200)] p-3 text-sm">
+            <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--color-ink-200)] p-3 text-sm">
+                {active.hold_amount && (
                 <p>
                   Hold {active.hold_amount} ST · {active.hold_status ? humanizeLabel(active.hold_status) : ""}
                 </p>
+                )}
                 {active.user_explanation && <p>User: {active.user_explanation}</p>}
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn-secondary !min-h-10 !px-3 text-xs" onClick={() => holdAction(active.id, "release")}>
-                    Release
+                    Release held transfer
                   </button>
                   <button type="button" className="btn-secondary !min-h-10 !px-3 text-xs" onClick={() => holdAction(active.id, "confirm")}>
                     Confirm fraud
                   </button>
-                  <button type="button" className="btn-secondary !min-h-10 !px-3 text-xs" onClick={() => updateStatus(active.id, "false_positive")}>
+                  <label className="sr-only" htmlFor="fp-reason">False positive reason</label>
+                  <select id="fp-reason" className="input !w-auto min-h-10 text-xs" value={reason} onChange={(event) => setReason(event.target.value)}>
+                    <option value="legitimate_group_payment">Legitimate group payment</option>
+                    <option value="known_contacts">Known contacts</option>
+                    <option value="salary_or_refund">Salary or refund</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <input className="input !w-auto min-h-10 text-xs" placeholder="Note (optional)" value={note} onChange={(event) => setNote(event.target.value)} />
+                  <button type="button" className="btn-secondary !min-h-10 !px-3 text-xs" onClick={() => updateStatus(active.id, "false_positive", reason)}>
                     False positive
+                  </button>
+                  <button type="button" className="btn-secondary !min-h-10 !px-3 text-xs" onClick={() => api.post(`/fraud-alerts/${active.id}/restriction/lift`).then(() => openCase(active))}>
+                    Lift restriction
                   </button>
                 </div>
               </div>
-            )}
             {stats.length > 0 && (
               <ul className="text-xs text-[var(--color-text-muted)]">
                 {stats.map((stat) => (

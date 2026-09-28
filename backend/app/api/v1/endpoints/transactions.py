@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.models.transaction import Transaction
 from app.models.user import User
+from fastapi.responses import JSONResponse
+
 from app.schemas.transaction import (
     PaginatedTransactions,
+    StepUpConfirm,
     TransactionReceipt,
     TransactionSummary,
     TransferRequest,
@@ -16,10 +19,16 @@ from app.schemas.transaction import (
 from app.schemas.user import UserSearchResult
 from app.services.pin_service import InvalidPinError, PinLockedError, PinNotSetError
 from app.services.transfer_service import (
+    AccountRestrictedError,
+    ChallengeRejected,
     FundsOnHoldError,
+    IdempotencyConflict,
     InsufficientBalanceError,
     RecipientNotFoundError,
     SelfTransferError,
+    StepUpRequired,
+    TransactionHeld,
+    confirm_step_up,
     execute_transfer,
     get_transaction_for_user,
     list_transactions_for_user,
@@ -103,8 +112,45 @@ def transfer(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
+    except AccountRestrictedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except IdempotencyConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except StepUpRequired as exc:
+        return JSONResponse(
+            status_code=428,
+            content={
+                "challenge_id": exc.challenge_id,
+                "code": exc.code,
+                "reasons": exc.reasons,
+                "risk_score": exc.risk_score,
+                "detail": "Enter the code shown here to confirm this transfer.",
+            },
+        )
+    except TransactionHeld as exc:
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={"detail": "Held for review", "transaction_id": exc.transaction_id, "reasons": exc.reasons},
+        )
 
     db.refresh(current_user)
+    return _to_receipt(transaction, current_user)
+
+
+@router.post("/transfer/confirm", response_model=TransactionReceipt, status_code=status.HTTP_201_CREATED)
+def confirm_transfer(
+    payload: StepUpConfirm,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TransactionReceipt:
+    try:
+        transaction = confirm_step_up(db, current_user, payload.challenge_id, payload.code, payload.idempotency_key)
+    except ChallengeRejected as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except InsufficientBalanceError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    except RecipientNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return _to_receipt(transaction, current_user)
 
 

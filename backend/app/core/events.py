@@ -27,6 +27,7 @@ class TransactionCompletedEvent:
     sender_id: int
     receiver_id: int
     amount: Decimal
+    result: dict | None = None
 
 
 EventHandler = Callable[[TransactionCompletedEvent], None]

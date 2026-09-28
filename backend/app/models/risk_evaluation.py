@@ -22,3 +22,5 @@ class RiskEvaluation(Base, TimestampMixin):
     rules_version: Mapped[str] = mapped_column(String(16), nullable=False)
     narrative: Mapped[str] = mapped_column(Text, nullable=False)
     hold_placed: Mapped[bool] = mapped_column(default=False, nullable=False)
+    decision_trace: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    outcome: Mapped[str | None] = mapped_column(String(64), nullable=True)

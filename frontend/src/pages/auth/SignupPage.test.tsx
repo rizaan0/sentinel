@@ -5,6 +5,10 @@ import SignupPage from "./SignupPage";
 import { renderWithProviders } from "../../test/testUtils";
 import { api } from "../../lib/api";
 
+vi.mock("@/components/motion/shader-background", () => ({
+  ShaderBackground: () => null,
+}));
+
 vi.mock("../../lib/api", () => ({
   api: {
     post: vi.fn(),
