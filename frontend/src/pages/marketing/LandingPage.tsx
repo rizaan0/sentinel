@@ -1,13 +1,13 @@
 import { Helmet } from "react-helmet-async";
 import { GrainPastelBackground } from "@/components/motion/grain-pastel-background";
-import Navbar from "./sections/Navbar";
+import { LiquidNavbarDemo } from "@/components/motion/liquid-glass";
 import HeroSection from "./sections/HeroSection";
 import Footer from "./sections/Footer";
 
 export default function LandingPage() {
   return (
     <div className="relative flex min-h-dvh flex-col bg-white text-[var(--color-text)]">
-      <GrainPastelBackground />
+      <GrainPastelBackground className="opacity-[0.999]" />
       <Helmet>
         <title>Sentinel — Real-Time Transaction Monitoring</title>
         <meta
@@ -22,8 +22,8 @@ export default function LandingPage() {
         <meta property="og:type" content="website" />
       </Helmet>
 
-      <Navbar />
-      <main className="flex min-h-0 flex-1 flex-col">
+      <LiquidNavbarDemo />
+      <main className="flex min-h-0 flex-1 flex-col pt-28 sm:pt-32">
         <HeroSection />
       </main>
       <Footer />
