@@ -1,9 +1,10 @@
-import { LANDING_CONTENT } from "../landingRail";
+import { LANDING_FRAME, LANDING_PAD } from "../landingRail";
 
 export default function HeroSection() {
   return (
     <section className="relative flex flex-1 flex-col justify-center">
-      <div className={`${LANDING_CONTENT} flex w-full flex-col items-center gap-12 py-8 sm:py-10`}>
+      <div className={LANDING_PAD}>
+      <div className={`${LANDING_FRAME} flex w-full flex-col items-center gap-12 py-8 sm:py-10`}>
         <div className="mx-auto flex w-fit max-w-full flex-col items-center pt-12 text-center">
           <div className="relative w-fit max-w-full">
             <h1 className="text-balance text-[2.25rem] font-semibold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] sm:text-[3rem] sm:leading-[1.05] md:text-[3.25rem]">
@@ -46,6 +47,7 @@ export default function HeroSection() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );
