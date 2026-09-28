@@ -1,5 +1,11 @@
-/** Shared landing rail — navbar, hero, and footer align to the same edges. */
-export const LANDING_CHROME = "mx-auto w-full max-w-5xl px-5 sm:px-8";
+/** Symmetric page inset. Keeps the rail on the viewport center. */
+export const LANDING_PAD = "px-4 sm:px-8";
 
-/** Hero measure — same rail as chrome; inner card keeps its own max width. */
-export const LANDING_CONTENT = LANDING_CHROME;
+/** One centered column for the navbar, hero, and footer. */
+export const LANDING_FRAME = "mx-auto w-full max-w-5xl";
+
+/** Rail plus inset, for content that should sit inside the frame edges. */
+export const LANDING_CHROME = `${LANDING_FRAME} ${LANDING_PAD}`;
+
+/** Hero measure — same frame as the navbar and footer. */
+export const LANDING_CONTENT = LANDING_FRAME;
